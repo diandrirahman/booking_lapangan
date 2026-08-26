@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+coverage/
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Local environment
+.env
+.env.*
+!.env.example
+*.local
+*.log
+
+# Generated Graphify output
+graphify-out/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
