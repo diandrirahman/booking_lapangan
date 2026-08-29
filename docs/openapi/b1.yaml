@@ -42,6 +42,31 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
         "500":
           $ref: "#/components/responses/InternalError"
+  /media:
+    get:
+      tags: [Venues]
+      operationId: getPublicMedia
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 255
+      responses:
+        "302":
+          description: Redirect to a short-lived download URL for a public media asset.
+          headers:
+            Location:
+              required: true
+              schema: { type: string, format: uri }
+            Cache-Control:
+              schema: { type: string }
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /auth/register:
     post:
       tags: [Auth]

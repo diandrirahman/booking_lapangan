@@ -552,7 +552,7 @@ export class CatalogService {
 }
 
 function publicObjectUrl(baseUrl: string, storageKey: string): string | null {
-  if (!baseUrl) return null;
+  if (!baseUrl) return `/api/v1/media?key=${encodeURIComponent(storageKey)}`;
   const encodedKey = storageKey.split("/").map(encodeURIComponent).join("/");
   return `${baseUrl.replace(/\/$/, "")}/${encodedKey}`;
 }

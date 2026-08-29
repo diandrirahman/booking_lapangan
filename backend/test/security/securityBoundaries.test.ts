@@ -201,6 +201,32 @@ describe("security boundaries", () => {
     expect(createVenueUpload).not.toHaveBeenCalled();
   });
 
+  it("mengalihkan media publik ke URL download bertanda tangan", async () => {
+    const createPublicDownloadUrl = vi
+      .fn()
+      .mockResolvedValue("https://storage.example.test/signed-media");
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      routers: [
+        createMediaRouter(
+          { createPublicDownloadUrl } as unknown as MediaService,
+          {} as TenantAuthorizationService,
+        ),
+      ],
+    });
+    const response = await request(app)
+      .get("/api/v1/media")
+      .query({ key: "uploads/tenant/venue/user/media.webp" });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe("https://storage.example.test/signed-media");
+    expect(response.headers["cache-control"]).toBe("public, max-age=300");
+    expect(createPublicDownloadUrl).toHaveBeenCalledWith(
+      "uploads/tenant/venue/user/media.webp",
+    );
+  });
+
   it("menjaga public REST hidup dan protected REST 503 saat session Redis gagal", async () => {
     const router = Router();
     router.get("/public", (_request, response) => response.json({ ok: true }));

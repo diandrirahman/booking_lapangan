@@ -165,6 +165,17 @@ export class ObjectStorageService {
     return { storageKey, uploadUrl, expiresInSeconds };
   }
 
+  async createSignedDownload(storageKey: string): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({
+        Bucket: this.environment.S3_BUCKET,
+        Key: storageKey,
+      }),
+      { expiresIn: 300 },
+    );
+  }
+
   async listUploadsOlderThan(cutoff: Date, limit = 100): Promise<string[]> {
     const result = await this.client.send(
       new ListObjectsV2Command({

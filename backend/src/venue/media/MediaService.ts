@@ -140,6 +140,23 @@ export class MediaService {
     });
   }
 
+  async createPublicDownloadUrl(storageKey: string): Promise<string> {
+    const [asset] = await this.database.db
+      .select({ storageKey: mediaAssets.storageKey })
+      .from(mediaAssets)
+      .where(
+        and(
+          eq(mediaAssets.storageKey, storageKey),
+          eq(mediaAssets.visibility, "PUBLIC"),
+        ),
+      )
+      .limit(1);
+    if (!asset) {
+      throw new ApiError(404, "MEDIA_NOT_FOUND", "Media tidak ditemukan.");
+    }
+    return this.storage.createSignedDownload(asset.storageKey);
+  }
+
   async cleanupOrphanUploads(cutoff = new Date(Date.now() - 60 * 60 * 1_000)) {
     const candidates = await this.storage.listUploadsOlderThan(cutoff, 100);
     if (!candidates.length) return 0;

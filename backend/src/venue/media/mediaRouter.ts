@@ -22,6 +22,15 @@ export function createMediaRouter(
   authorization: TenantAuthorizationService,
 ): Router {
   const router = Router();
+  router.get(
+    "/media",
+    asyncHandler(async (request, response) => {
+      const storageKey = z.string().trim().min(10).max(255).parse(request.query.key);
+      const downloadUrl = await mediaService.createPublicDownloadUrl(storageKey);
+      response.setHeader("Cache-Control", "public, max-age=300");
+      response.redirect(302, downloadUrl);
+    }),
+  );
   router.post(
     "/business/venues/:venueId/media/signed-upload",
     requireSession,

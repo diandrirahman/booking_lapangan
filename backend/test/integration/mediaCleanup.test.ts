@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { mediaAssets } from "../../src/database/schema/index.js";
 import { MediaService } from "../../src/venue/media/MediaService.js";
@@ -36,6 +36,54 @@ describe("media orphan cleanup", () => {
     expect(deleteUpload).toHaveBeenCalledWith(orphanKey);
 
     await testDatabase.db.delete(mediaAssets).where(eq(mediaAssets.id, created.id));
+  });
+
+  it("hanya membuat download untuk asset berstatus publik", async () => {
+    const publicKey = `uploads/qa/public-${Date.now()}.webp`;
+    const privateKey = `uploads/qa/private-${Date.now()}.webp`;
+    const created = await testDatabase.db
+      .insert(mediaAssets)
+      .values([
+        {
+          ownerUserId: 1,
+          storageKey: publicKey,
+          mimeType: "image/webp",
+          byteSize: 12,
+          visibility: "PUBLIC",
+          altText: "Media publik QA",
+        },
+        {
+          ownerUserId: 1,
+          storageKey: privateKey,
+          mimeType: "image/webp",
+          byteSize: 12,
+          visibility: "PRIVATE",
+          altText: "Media privat QA",
+        },
+      ])
+      .$returningId();
+    const createSignedDownload = vi
+      .fn()
+      .mockResolvedValue("https://storage.example.test/signed-media");
+    const service = new MediaService(testDatabase, {
+      createSignedDownload,
+    } as unknown as ObjectStorageService);
+
+    await expect(service.createPublicDownloadUrl(publicKey)).resolves.toBe(
+      "https://storage.example.test/signed-media",
+    );
+    await expect(service.createPublicDownloadUrl(privateKey)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "MEDIA_NOT_FOUND",
+    });
+    expect(createSignedDownload).toHaveBeenCalledOnce();
+
+    await testDatabase.db.delete(mediaAssets).where(
+      inArray(
+        mediaAssets.id,
+        created.map((asset) => asset.id),
+      ),
+    );
   });
 });
 
