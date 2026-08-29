@@ -54,8 +54,8 @@ export const venues: Venue[] = [
     image: arenaImage,
     status: "published",
     facilities: ["Parkir luas", "Ruang ganti", "Shower", "Kafe"],
-    lat: 28,
-    lng: 35,
+    lat: -6.2607,
+    lng: 106.816,
   },
   {
     id: "v2",
@@ -72,8 +72,8 @@ export const venues: Venue[] = [
     image: soccerImage,
     status: "published",
     facilities: ["Tribun", "Parkir", "Mushola"],
-    lat: 62,
-    lng: 56,
+    lat: -6.2924,
+    lng: 106.7993,
   },
   {
     id: "v3",
@@ -90,8 +90,8 @@ export const venues: Venue[] = [
     image: padelImage,
     status: "published",
     facilities: ["Kafe", "Pro shop", "Shower"],
-    lat: 46,
-    lng: 22,
+    lat: -6.2186,
+    lng: 106.8025,
   },
   {
     id: "v4",
@@ -108,8 +108,8 @@ export const venues: Venue[] = [
     image: hoopsImage,
     status: "published",
     facilities: ["AC", "Locker", "Tribun"],
-    lat: 74,
-    lng: 31,
+    lat: -6.2615,
+    lng: 106.8144,
   },
   {
     id: "v5",
@@ -126,8 +126,8 @@ export const venues: Venue[] = [
     image: tennisImage,
     status: "published",
     facilities: ["Coach", "Kafe", "Locker"],
-    lat: 30,
-    lng: 70,
+    lat: -6.1944,
+    lng: 106.8294,
   },
   {
     id: "v6",
@@ -144,8 +144,8 @@ export const venues: Venue[] = [
     image: miniSoccerImage,
     status: "in_review",
     facilities: ["Lounge", "Parkir", "Shower"],
-    lat: 80,
-    lng: 74,
+    lat: -6.3018,
+    lng: 106.6502,
   },
 ];
 
@@ -191,8 +191,7 @@ export const slots: Slot[] = courts.slice(0, 4).flatMap((court, courtIndex) =>
 );
 export const customers = Array.from({ length: 30 }, (_, index) => ({
   id: `u${index + 1}`,
-  name:
-    ["Raka", "Nadia", "Fikri", "Alya", "Dimas"][index % 5] + ` ${index + 1}`,
+  name: ["Raka", "Nadia", "Fikri", "Alya", "Dimas"][index % 5] + ` ${index + 1}`,
   city: index % 2 ? "Jakarta" : "Tangerang",
 }));
 export const staff = Array.from({ length: 8 }, (_, index) => ({
@@ -209,8 +208,7 @@ export const bookings: Booking[] = Array.from({ length: 50 }, (_, index) => ({
   slots: [`${17 + (index % 5)}.00`],
   amount: 85000 + (index % 6) * 25000,
   paymentStatus: index % 7 === 0 ? "dp" : index % 5 === 0 ? "unpaid" : "paid",
-  status:
-    index % 8 === 0 ? "pending" : index % 6 === 0 ? "completed" : "confirmed",
+  status: index % 8 === 0 ? "pending" : index % 6 === 0 ? "completed" : "confirmed",
   source: index % 9 === 0 ? "offline" : "online",
 }));
 export const mabars: Mabar[] = Array.from({ length: 5 }, (_, index) => ({
@@ -246,9 +244,10 @@ export const mabars: Mabar[] = Array.from({ length: 5 }, (_, index) => ({
 }));
 
 const defaultSchedule = Object.fromEntries(
-  ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"].map(
-    (day) => [day, { enabled: true, opensAt: "07:00", closesAt: "23:00" }],
-  ),
+  ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"].map((day) => [
+    day,
+    { enabled: true, opensAt: "07:00", closesAt: "23:00" },
+  ]),
 );
 
 const venueDrafts = Object.fromEntries(

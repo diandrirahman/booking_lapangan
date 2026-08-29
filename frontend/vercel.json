@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "outputDirectory": "build",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://lapangango-b1-staging-api.vercel.app/api/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

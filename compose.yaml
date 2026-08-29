@@ -1,0 +1,56 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: lapangango
+      MYSQL_USER: lapangango
+      MYSQL_PASSWORD: lapangango_local
+      MYSQL_ROOT_PASSWORD: root_local
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - lapangango_mysql:/var/lib/mysql
+  mysql-e2e:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: lapangango_e2e
+      MYSQL_USER: lapangango
+      MYSQL_PASSWORD: lapangango_test
+      MYSQL_ROOT_PASSWORD: root_test
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: lapangango
+      MINIO_ROOT_PASSWORD: lapangango_local_secret
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:4175,http://127.0.0.1:4175"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - lapangango_minio:/data
+
+volumes:
+  lapangango_mysql:
+  lapangango_minio:

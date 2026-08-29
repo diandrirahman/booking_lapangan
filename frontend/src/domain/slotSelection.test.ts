@@ -12,9 +12,7 @@ describe("contiguous slot selection", () => {
 
   it("menolak lompatan waktu dan slot setelah gap terisi", () => {
     expect(canToggleSlot(courtSlots, ["c1-17.00"], "c1-20.00")).toBe(false);
-    expect(
-      canToggleSlot(courtSlots, ["c1-17.00", "c1-18.00"], "c1-20.00"),
-    ).toBe(false);
+    expect(canToggleSlot(courtSlots, ["c1-17.00", "c1-18.00"], "c1-20.00")).toBe(false);
   });
 
   it("hanya dapat menghapus pilihan dari ujung rangkaian", () => {
@@ -24,8 +22,6 @@ describe("contiguous slot selection", () => {
     const selection = ["c1-17.00", "c1-18.00", "c1-19.00"];
     expect(canToggleSlot(customSlots, selection, "c1-18.00")).toBe(false);
     expect(canToggleSlot(customSlots, selection, "c1-19.00")).toBe(true);
-    expect(contiguousSelectionLabel(customSlots, selection)).toBe(
-      "17.00–20.00",
-    );
+    expect(contiguousSelectionLabel(customSlots, selection)).toBe("17.00–20.00");
   });
 });

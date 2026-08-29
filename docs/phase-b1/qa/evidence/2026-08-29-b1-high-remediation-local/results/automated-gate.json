@@ -1,0 +1,25 @@
+{
+  "command": "npm run qa:b1:local",
+  "date": "2026-08-29",
+  "status": "pass",
+  "results": {
+    "format": "pass",
+    "lint": "pass",
+    "typeCheck": "pass",
+    "frontendUnit": 39,
+    "backendUnit": 45,
+    "apiClientUnit": 1,
+    "integration": 20,
+    "security": 14,
+    "productionAuditVulnerabilities": 0,
+    "build": "pass",
+    "phaseAE2E": { "passed": 36, "skipped": 20 },
+    "phaseB1E2E": { "passed": 34, "skipped": 6 },
+    "uiRouteAudit": { "routes": 66, "status": "pass" },
+    "manualMatrixSupportingTest": { "passed": 17, "skipped": 3 },
+    "concurrency": { "requests": 50, "maximumActiveReservations": 1 },
+    "contract": 1,
+    "migrations": 3,
+    "documentation": 3
+  }
+}

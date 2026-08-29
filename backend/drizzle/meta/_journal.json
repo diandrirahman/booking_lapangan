@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1787830105169,
+      "tag": "0000_abandoned_supreme_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1787830684653,
+      "tag": "0001_marvelous_exiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787840186157,
+      "tag": "0002_outgoing_gateway",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "finding": "B1-SEC-LOCAL-004",
+  "environment": "local",
+  "checks": {
+    "ownerOwnVenueWebp": "pass",
+    "customer": 403,
+    "staff": 403,
+    "otherTenant": 403,
+    "pdf": 422,
+    "mimeExtensionSpoof": 422,
+    "magicBytesSpoof": 422,
+    "duplicateStorageKey": "rejected",
+    "browserUploadProgressPercent": 100
+  },
+  "status": "pass"
+}

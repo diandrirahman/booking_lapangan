@@ -1,0 +1,1 @@
+ALTER TABLE `media_assets` ADD CONSTRAINT `media_assets_storage_key_unique` UNIQUE(`storage_key`);

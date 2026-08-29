@@ -33,7 +33,7 @@ const dataTableFeatures = tableFeatures({
 export type DataTableColumnDef<TData extends object> = ColumnDef<
   typeof dataTableFeatures,
   TData,
-  any
+  unknown
 >;
 
 interface DataTableProps<TData extends object> {
@@ -105,10 +105,7 @@ export function DataTable<TData extends object>({
                         )}
                       </button>
                     ) : (
-                      flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )
+                      flexRender(header.column.columnDef.header, header.getContext())
                     )}
                   </th>
                 ))}

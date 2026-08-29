@@ -8,6 +8,8 @@ export interface CheckoutTotals {
   dueNow: number;
 }
 
+export type ServerPaymentMode = "FULL" | "DP" | "PAY_AT_VENUE";
+
 export function calculateCheckoutTotals({
   amount,
   paymentMethod,
@@ -30,4 +32,23 @@ export function calculateCheckoutTotals({
         ? 0
         : total;
   return { subtotal, addOn, discount, total, dueNow };
+}
+
+export function calculateServerCheckoutPreview(
+  amount: number,
+  paymentMode: ServerPaymentMode,
+): CheckoutTotals {
+  const dueNow =
+    paymentMode === "DP"
+      ? Math.ceil(amount * 0.5)
+      : paymentMode === "PAY_AT_VENUE"
+        ? 0
+        : amount;
+  return {
+    subtotal: amount,
+    addOn: 0,
+    discount: 0,
+    total: amount,
+    dueNow,
+  };
 }

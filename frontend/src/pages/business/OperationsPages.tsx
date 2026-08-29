@@ -28,8 +28,24 @@ import {
   contiguousSelectionLabel,
   selectedSlotEntities,
 } from "../../domain/slotSelection";
+import { serverStateEnabled } from "../../api/apiClient";
+import {
+  IntegratedCheckInPage,
+  IntegratedOfflineBookingPage,
+  IntegratedOperationsBookingsPage,
+  IntegratedOperationsCalendarPage,
+  IntegratedOutstandingPage,
+} from "./IntegratedOperationsPages";
 
 export function OperationsCalendarPage() {
+  return serverStateEnabled ? (
+    <IntegratedOperationsCalendarPage />
+  ) : (
+    <PrototypeOperationsCalendarPage />
+  );
+}
+
+function PrototypeOperationsCalendarPage() {
   const { state } = usePrototype();
   const [view, setView] = useState<"day" | "month">("day");
   const [periodIndex, setPeriodIndex] = useState(1);
@@ -119,10 +135,7 @@ export function OperationsCalendarPage() {
             <ChevronRight />
           </Button>
         </div>
-        <div
-          className="calendar-view-switch"
-          aria-label="Pilih tampilan kalender"
-        >
+        <div className="calendar-view-switch" aria-label="Pilih tampilan kalender">
           <Button
             variant={view === "day" ? "primary" : "secondary"}
             size="sm"
@@ -177,9 +190,7 @@ export function OperationsCalendarPage() {
                         {9 + index}.00–{10 + index}.00
                       </small>
                       <b>{state.bookings[index].id}</b>
-                      <span>
-                        {index === 2 ? "Maintenance" : "Booking online"}
-                      </span>
+                      <span>{index === 2 ? "Maintenance" : "Booking online"}</span>
                     </button>
                   }
                 >
@@ -206,6 +217,14 @@ export function OperationsCalendarPage() {
 }
 
 export function OperationsBookingsPage() {
+  return serverStateEnabled ? (
+    <IntegratedOperationsBookingsPage />
+  ) : (
+    <PrototypeOperationsBookingsPage />
+  );
+}
+
+function PrototypeOperationsBookingsPage() {
   const { state } = usePrototype();
   const navigate = useNavigate();
   const columns = useMemo<DataTableColumnDef<Booking>[]>(
@@ -234,16 +253,13 @@ export function OperationsBookingsPage() {
         id: "venue",
         header: "Venue",
         accessorFn: (booking) =>
-          state.venues.find((venue) => venue.id === booking.venueId)?.name ??
-          "-",
+          state.venues.find((venue) => venue.id === booking.venueId)?.name ?? "-",
       },
       {
         accessorKey: "paymentStatus",
         header: "Pembayaran",
         cell: ({ row }) => (
-          <Badge
-            tone={row.original.paymentStatus === "paid" ? "success" : "warning"}
-          >
+          <Badge tone={row.original.paymentStatus === "paid" ? "success" : "warning"}>
             {statusLabel(row.original.paymentStatus)}
           </Badge>
         ),
@@ -364,17 +380,14 @@ function BookingOperationsPanel({ booking }: { booking: Booking }) {
             Check-in
           </Button>
         )}
-        {booking.paymentStatus !== "paid" &&
-          booking.paymentStatus !== "refunded" && (
-            <Button
-              variant="secondary"
-              onClick={() =>
-                dispatch({ type: "SETTLE_BOOKING", bookingId: booking.id })
-              }
-            >
-              Catat pelunasan
-            </Button>
-          )}
+        {booking.paymentStatus !== "paid" && booking.paymentStatus !== "refunded" && (
+          <Button
+            variant="secondary"
+            onClick={() => dispatch({ type: "SETTLE_BOOKING", bookingId: booking.id })}
+          >
+            Catat pelunasan
+          </Button>
+        )}
       </div>
       {booking.checkedInAt && <Badge tone="success">Sudah check-in</Badge>}
     </div>
@@ -382,15 +395,20 @@ function BookingOperationsPanel({ booking }: { booking: Booking }) {
 }
 
 export function OfflineBookingPage() {
+  return serverStateEnabled ? (
+    <IntegratedOfflineBookingPage />
+  ) : (
+    <PrototypeOfflineBookingPage />
+  );
+}
+
+function PrototypeOfflineBookingPage() {
   const { state, dispatch } = usePrototype();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
   const offlineSlots = state.slots.filter((slot) => slot.courtId === "c1");
   const selected = selectedSlotEntities(offlineSlots, state.selectedSlots);
-  const selectedRange = contiguousSelectionLabel(
-    offlineSlots,
-    state.selectedSlots,
-  );
+  const selectedRange = contiguousSelectionLabel(offlineSlots, state.selectedSlots);
   useEffect(() => {
     dispatch({ type: "CLEAR_SLOTS" });
   }, [dispatch]);
@@ -461,9 +479,7 @@ export function OfflineBookingPage() {
           <div className="fieldset-heading">
             <div>
               <legend>Pilih waktu berurutan</legend>
-              <p>
-                Slot tambahan harus tepat sebelum atau sesudah pilihan aktif.
-              </p>
+              <p>Slot tambahan harus tepat sebelum atau sesudah pilihan aktif.</p>
             </div>
             {selected.length > 0 && (
               <Badge tone="success">
@@ -479,16 +495,13 @@ export function OfflineBookingPage() {
                 state.selectedSlots,
                 slot.id,
               );
-              const locked =
-                slot.status === "available" && !isSelected && !canToggle;
+              const locked = slot.status === "available" && !isSelected && !canToggle;
               return (
                 <button
                   key={slot.id}
                   disabled={slot.status !== "available" || locked}
                   title={
-                    locked
-                      ? "Slot tidak bersebelahan dengan pilihan aktif"
-                      : undefined
+                    locked ? "Slot tidak bersebelahan dengan pilihan aktif" : undefined
                   }
                   className={`${slot.status} ${isSelected ? "selected" : ""} ${locked ? "selection-locked" : ""} ${canToggle && state.selectedSlots.length && !isSelected ? "extendable" : ""}`}
                   onClick={() => {
@@ -504,9 +517,7 @@ export function OfflineBookingPage() {
             })}
           </div>
           {error && (
-            <p className="field-error">
-              Pilih minimal satu slot yang tersedia.
-            </p>
+            <p className="field-error">Pilih minimal satu slot yang tersedia.</p>
           )}
         </fieldset>
         <div className="form-actions">
@@ -521,6 +532,10 @@ export function OfflineBookingPage() {
 }
 
 export function CheckInPage() {
+  return serverStateEnabled ? <IntegratedCheckInPage /> : <PrototypeCheckInPage />;
+}
+
+function PrototypeCheckInPage() {
   const { state, dispatch } = usePrototype();
   const [bookingCode, setBookingCode] = useState("");
   const [foundBookingId, setFoundBookingId] = useState<string>();
@@ -599,6 +614,14 @@ export function CheckInPage() {
 }
 
 export function OutstandingPage() {
+  return serverStateEnabled ? (
+    <IntegratedOutstandingPage />
+  ) : (
+    <PrototypeOutstandingPage />
+  );
+}
+
+function PrototypeOutstandingPage() {
   const { state } = usePrototype();
   const outstanding = state.bookings
     .filter((booking) => booking.paymentStatus !== "paid")
@@ -629,7 +652,7 @@ export function OutstandingPage() {
           <strong>3</strong>
         </Card>
       </div>
-      <OperationsBookingsPage />
+      <PrototypeOperationsBookingsPage />
     </>
   );
 }

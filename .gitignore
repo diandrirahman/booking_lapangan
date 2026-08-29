@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.turbo/
 
 # Build output
 build/
@@ -16,6 +17,12 @@ playwright-report/
 !.env.example
 *.local
 *.log
+.env.test
+
+# Local data volumes and generated clients
+.data/
+backups/
+.tmp/
 
 # Generated Graphify output
 graphify-out/
@@ -25,3 +32,6 @@ graphify-out/
 .idea/
 .DS_Store
 Thumbs.db
+
+.vercel
+.env*

@@ -21,8 +21,23 @@ import {
 import { usePrototype } from "../store/PrototypeStore";
 import { formatRupiah, statusLabel } from "../store/selectors";
 import { SelectField } from "../components/SelectField";
+import { serverStateEnabled } from "../api/apiClient";
+import {
+  IntegratedAdminDashboardPage,
+  IntegratedAdminTenantsPage,
+  IntegratedAdminVenuesPage,
+  IntegratedAdminVerificationsPage,
+} from "./IntegratedAdminPages";
 
 export function AdminDashboardPage() {
+  return serverStateEnabled ? (
+    <IntegratedAdminDashboardPage />
+  ) : (
+    <PrototypeAdminDashboardPage />
+  );
+}
+
+function PrototypeAdminDashboardPage() {
   const { state } = usePrototype();
   const navigate = useNavigate();
   return (
@@ -43,10 +58,7 @@ export function AdminDashboardPage() {
         <Card>
           <span>Venue aktif</span>
           <strong>
-            {
-              state.venues.filter((venue) => venue.status === "published")
-                .length
-            }
+            {state.venues.filter((venue) => venue.status === "published").length}
           </strong>
           <small>2 sedang ditinjau</small>
         </Card>
@@ -58,10 +70,7 @@ export function AdminDashboardPage() {
         <Card>
           <span>Owner menunggu</span>
           <strong>
-            {
-              state.tenants.filter((tenant) => tenant.status !== "verified")
-                .length
-            }
+            {state.tenants.filter((tenant) => tenant.status !== "verified").length}
           </strong>
           <small>Perlu keputusan</small>
         </Card>
@@ -116,6 +125,10 @@ export function AdminDashboardPage() {
 }
 
 export function TenantsPage() {
+  return serverStateEnabled ? <IntegratedAdminTenantsPage /> : <PrototypeTenantsPage />;
+}
+
+function PrototypeTenantsPage() {
   const { state } = usePrototype();
   return (
     <>
@@ -159,10 +172,7 @@ export function TenantsPage() {
                 </td>
                 <td>{tenant.owner}</td>
                 <td>
-                  {
-                    state.venues.filter((venue) => venue.tenantId === tenant.id)
-                      .length
-                  }{" "}
+                  {state.venues.filter((venue) => venue.tenantId === tenant.id).length}{" "}
                   venue
                 </td>
                 <td>
@@ -192,9 +202,8 @@ export function TenantsPage() {
                     <p>Status: {statusLabel(tenant.status)}</p>
                     <p>
                       {
-                        state.venues.filter(
-                          (venue) => venue.tenantId === tenant.id,
-                        ).length
+                        state.venues.filter((venue) => venue.tenantId === tenant.id)
+                          .length
                       }{" "}
                       venue terdaftar.
                     </p>
@@ -210,13 +219,19 @@ export function TenantsPage() {
 }
 
 export function VerificationsPage() {
+  return serverStateEnabled ? (
+    <IntegratedAdminVerificationsPage />
+  ) : (
+    <PrototypeVerificationsPage />
+  );
+}
+
+function PrototypeVerificationsPage() {
   const { state, dispatch } = usePrototype();
   const pending = state.venues.filter(
     (venue) => venue.status === "in_review" || venue.status === "revision",
   );
-  const [selectedId, setSelectedId] = useState(
-    pending[0]?.id ?? state.venues[5].id,
-  );
+  const [selectedId, setSelectedId] = useState(pending[0]?.id ?? state.venues[5].id);
   const [queueFilter, setQueueFilter] = useState("all");
   const selected = state.venues.find((venue) => venue.id === selectedId)!;
   const [reason, setReason] = useState("");
@@ -261,27 +276,26 @@ export function VerificationsPage() {
             ]}
             onValueChange={setQueueFilter}
           />
-          {(displayedQueue.length
-            ? displayedQueue
-            : state.venues.slice(-1)
-          ).map((venue) => (
-            <button
-              key={venue.id}
-              className={selectedId === venue.id ? "active" : ""}
-              onClick={() => {
-                setSelectedId(venue.id);
-                setReason("");
-                setReasonError("");
-              }}
-            >
-              <img src={venue.image} alt="" />
-              <span>
-                <strong>{venue.name}</strong>
-                <small>{venue.location}</small>
-              </span>
-              <Badge tone="warning">{statusLabel(venue.status)}</Badge>
-            </button>
-          ))}
+          {(displayedQueue.length ? displayedQueue : state.venues.slice(-1)).map(
+            (venue) => (
+              <button
+                key={venue.id}
+                className={selectedId === venue.id ? "active" : ""}
+                onClick={() => {
+                  setSelectedId(venue.id);
+                  setReason("");
+                  setReasonError("");
+                }}
+              >
+                <img src={venue.image} alt="" />
+                <span>
+                  <strong>{venue.name}</strong>
+                  <small>{venue.location}</small>
+                </span>
+                <Badge tone="warning">{statusLabel(venue.status)}</Badge>
+              </button>
+            ),
+          )}
         </Card>
         <div>
           <Card className="review-card">
@@ -319,9 +333,7 @@ export function VerificationsPage() {
                 onChange={(event) => setReason(event.target.value)}
                 placeholder="Wajib untuk reject atau revisi"
               />
-              {reasonError && (
-                <span className="field-error">{reasonError}</span>
-              )}
+              {reasonError && <span className="field-error">{reasonError}</span>}
             </label>
             <div className="decision-actions">
               <Dialog
@@ -356,6 +368,14 @@ export function VerificationsPage() {
 }
 
 export function AdminVenuesPage() {
+  return serverStateEnabled ? (
+    <IntegratedAdminVenuesPage />
+  ) : (
+    <PrototypeAdminVenuesPage />
+  );
+}
+
+function PrototypeAdminVenuesPage() {
   const { state } = usePrototype();
   const navigate = useNavigate();
   return (
@@ -370,9 +390,7 @@ export function AdminVenuesPage() {
           <Card key={venue.id} className="owner-venue-card">
             <img src={venue.image} alt={venue.name} />
             <div>
-              <Badge
-                tone={venue.status === "published" ? "success" : "warning"}
-              >
+              <Badge tone={venue.status === "published" ? "success" : "warning"}>
                 {statusLabel(venue.status)}
               </Badge>
               <h2>{venue.name}</h2>

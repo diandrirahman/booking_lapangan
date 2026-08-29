@@ -9,7 +9,15 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from "../api/notificationQueries";
+import { serverStateEnabled } from "../api/apiClient";
+import { useSession } from "../api/session";
 import type { Notification } from "../domain/types";
+import { toNotificationPresentation } from "../domain/notificationPresentation";
 import { usePrototype } from "../store/PrototypeStore";
 
 export function NotificationIcon({ kind }: { kind: Notification["kind"] }) {
@@ -26,11 +34,17 @@ export function NotificationIcon({ kind }: { kind: Notification["kind"] }) {
 // Composition adapted from Ruixen UI's Notification Inbox Popover on 21st.dev.
 export function NotificationInbox() {
   const { state, dispatch } = usePrototype();
+  const session = useSession();
+  const serverNotifications = useNotifications(false, Boolean(session.data));
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const unreadCount = state.notifications.filter(
-    (notification) => !notification.read,
-  ).length;
-  const visibleNotifications = state.notifications
+  const usesServerNotifications = serverStateEnabled;
+  const notifications = usesServerNotifications
+    ? (serverNotifications.data?.items.map(toNotificationPresentation) ?? [])
+    : state.notifications;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const visibleNotifications = notifications
     .filter((notification) => filter === "all" || !notification.read)
     .slice(0, 4);
 
@@ -39,9 +53,7 @@ export function NotificationInbox() {
       <Popover.Trigger
         className="icon-button notification-trigger"
         aria-label={
-          unreadCount > 0
-            ? `Notifikasi, ${unreadCount} belum dibaca`
-            : "Notifikasi"
+          unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"
         }
       >
         <Bell />
@@ -66,7 +78,13 @@ export function NotificationInbox() {
             <button
               type="button"
               disabled={unreadCount === 0}
-              onClick={() => dispatch({ type: "MARK_ALL_NOTIFICATIONS_READ" })}
+              onClick={() => {
+                if (usesServerNotifications) {
+                  markAllRead.mutate();
+                } else {
+                  dispatch({ type: "MARK_ALL_NOTIFICATIONS_READ" });
+                }
+              }}
             >
               <CheckCheck />
               Tandai semua
@@ -95,12 +113,16 @@ export function NotificationInbox() {
                   className={`notification-compact-row ${notification.read ? "" : "unread"}`}
                   key={notification.id}
                   to={notification.actionHref}
-                  onClick={() =>
-                    dispatch({
-                      type: "MARK_NOTIFICATION_READ",
-                      notificationId: notification.id,
-                    })
-                  }
+                  onClick={() => {
+                    if (usesServerNotifications) {
+                      markRead.mutate(notification.id);
+                    } else {
+                      dispatch({
+                        type: "MARK_NOTIFICATION_READ",
+                        notificationId: notification.id,
+                      });
+                    }
+                  }}
                 >
                   <span className={`notification-kind ${notification.kind}`}>
                     <NotificationIcon kind={notification.kind} />

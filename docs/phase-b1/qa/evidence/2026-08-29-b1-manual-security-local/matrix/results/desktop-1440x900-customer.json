@@ -1,0 +1,11 @@
+{
+  "role": "customer",
+  "viewport": "desktop-1440x900",
+  "lightHasHorizontalOverflow": false,
+  "darkHasHorizontalOverflow": false,
+  "keyboardFocusPassed": true,
+  "lightAccessibilityViolations": [],
+  "darkAccessibilityViolations": [],
+  "pageErrors": [],
+  "serverErrors": []
+}

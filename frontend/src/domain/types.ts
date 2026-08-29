@@ -10,8 +10,7 @@ export type Scenario =
   | "reconnecting"
   | "success"
   | "unauthorized";
-export type VenueStatus =
-  "draft" | "in_review" | "revision" | "published" | "rejected";
+export type VenueStatus = "draft" | "in_review" | "revision" | "published" | "rejected";
 
 export interface Venue {
   id: string;
@@ -66,10 +65,7 @@ export interface VenueDraft {
   venueId: string;
   contact: string;
   mediaReady: boolean;
-  schedule: Record<
-    string,
-    { enabled: boolean; opensAt: string; closesAt: string }
-  >;
+  schedule: Record<string, { enabled: boolean; opensAt: string; closesAt: string }>;
   exceptions: string[];
   bufferMinutes: number;
   basePrice: number;

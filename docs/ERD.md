@@ -9,6 +9,13 @@ language: "id-ID"
 
 # LapanganGo ERD Phase B dan Data Dictionary
 
+> Catatan 2026-08-27: dokumen panjang ini tetap menyimpan rancangan konseptual B1-B3.
+> Tipe `char(26)` di bagian rancangan lama bukan lagi source of truth implementation.
+> Schema runtime B1 menggunakan kebijakan numeric ID dan panjang domain yang dijelaskan
+> pada [audit schema](phase-b1/DATABASE_SCHEMA_AUDIT_HOLD.md). Migration aktif hanya
+> mencakup 54 tabel yang telah mempunyai service/query consumer; tabel B2/B3 dimigrasikan
+> bersama implementasi fiturnya.
+
 Dokumen Markdown ini merupakan representasi tekstual dari ERD Phase B dan sumber DBML LapanganGo. Model mencakup **98 tabel** dan **211 foreign-key relationships** untuk Phase B1, B2, dan B3.
 
 > [!IMPORTANT]
@@ -75,7 +82,7 @@ flowchart LR
 ### Identity & Tenant
 
 - [`users`](#table-users) - **B1** - Identitas pengguna untuk customer, owner, dan staff. Critical: Customer capability melekat pada identity; business access berasal dari membership.
-- [`auth_identities`](#table-auth-identities) - **B1** - Tautan identity ke provider login seperti password/Google.
+- [`auth_identities`](#table-auth-identities) - **B1** - Tautan akun ke provider login eksternal seperti Google.
 - [`platform_admins`](#table-platform-admins) - **B1** - Assignment admin platform yang terpisah dari membership tenant.
 - [`tenants`](#table-tenants) - **B1** - Organisasi bisnis owner; boundary utama data dan permission. Critical: primary_owner_membership_id menghindari partial unique untuk role primary owner.
 - [`tenant_roles`](#table-tenant-roles) - **B2** - Role template atau custom role dalam satu tenant.
@@ -313,7 +320,7 @@ flowchart LR
 ### `auth_identities`
 
 - **Fase:** `B1`
-- **Tujuan:** Tautan identity ke provider login seperti password/Google.
+- **Tujuan:** Tautan akun ke provider login eksternal seperti Google.
 
 | Kolom | Tipe | Nullable | Default | Key/Constraint | Referensi |
 |---|---|---|---|---|---|
@@ -4478,7 +4485,7 @@ Table auth_identities {
     (user_id, provider)
   }
 
-  Note: '''[B1] Tautan identity ke provider login seperti password/Google.'''
+  Note: '''[B1] Tautan akun ke provider login eksternal seperti Google.'''
 }
 
 Table platform_admins {

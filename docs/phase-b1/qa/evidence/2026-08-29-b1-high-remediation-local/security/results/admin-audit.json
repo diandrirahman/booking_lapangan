@@ -1,0 +1,17 @@
+{
+  "finding": "B1-OPS-LOCAL-001",
+  "environment": "local",
+  "checks": {
+    "adminEndpoint": 200,
+    "nonAdminEndpoint": 403,
+    "realSubmitEventsVisible": 2,
+    "realDecisionEventsVisible": 2,
+    "actorPresent": true,
+    "reasonPresent": true,
+    "timestampPresent": true,
+    "requestIdPresent": true,
+    "beforeAfterDialog": true,
+    "prototypeLabelPresent": false
+  },
+  "status": "pass"
+}

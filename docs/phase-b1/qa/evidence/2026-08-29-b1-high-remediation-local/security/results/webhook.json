@@ -1,0 +1,13 @@
+{
+  "finding": "B1-SEC-LOCAL-001",
+  "environment": "local",
+  "checks": {
+    "noOriginInvalidSignature": 401,
+    "forgedBrowserWrite": 403,
+    "validFirstDelivery": 204,
+    "validDuplicateDelivery": 204,
+    "providerEventRows": 1,
+    "paymentTransitionsDuplicated": false
+  },
+  "status": "pass"
+}

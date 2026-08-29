@@ -1,0 +1,15 @@
+{
+  "finding": "B1-SEC-LOCAL-003",
+  "environment": "local",
+  "checks": {
+    "liveDuringOutage": 200,
+    "readyDuringOutage": 503,
+    "readyState": "degraded",
+    "publicCatalogDuringOutage": 200,
+    "protectedRequestDuringOutage": 503,
+    "protectedErrorCode": "SESSION_STORE_UNAVAILABLE",
+    "apiProcessStayedAlive": true,
+    "readyAfterRecovery": 200
+  },
+  "status": "pass"
+}

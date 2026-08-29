@@ -1,13 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import {
-  AlertCircle,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  LoaderCircle,
-  X,
-} from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, ChevronRight, X } from "lucide-react";
 import {
   forwardRef,
   type ButtonHTMLAttributes,
@@ -90,12 +83,43 @@ export function EmptyState({
     </div>
   );
 }
-export function LoadingState() {
+export function LoadingState({
+  title = "Memuat data…",
+  description = "Mohon tunggu sebentar.",
+  compact = false,
+  variant = compact ? "inline" : "panel",
+}: {
+  title?: string;
+  description?: string;
+  compact?: boolean;
+  variant?: "page" | "panel" | "inline";
+}) {
   return (
-    <div className="state-card" role="status">
-      <LoaderCircle className="spin" />
-      <h2>Memuat data simulasi…</h2>
-      <p>Menyiapkan fixture lokal untuk skenario ini.</p>
+    <div
+      className={`state-card loading-state ${variant} ${compact ? "compact" : ""}`}
+      data-loading-variant={variant}
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      {variant === "page" ? (
+        <span className="loading-brand" aria-hidden="true">
+          <span className="loading-brand-ring" />
+          <span className="loading-brand-mark">LG</span>
+        </span>
+      ) : variant === "inline" ? (
+        <span className="loading-pulse" aria-hidden="true" />
+      ) : (
+        <span className="loading-skeleton" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      )}
+      <h2 className={variant === "page" ? "loading-shimmer-text" : undefined}>
+        {title}
+      </h2>
+      <p>{description}</p>
     </div>
   );
 }
@@ -166,7 +190,14 @@ export function ScenarioBoundary({
   children: ReactNode;
   emptyTitle?: string;
 }) {
-  if (scenario === "loading") return <LoadingState />;
+  if (scenario === "loading") {
+    return (
+      <LoadingState
+        title="Memuat data simulasi…"
+        description="Menyiapkan fixture lokal untuk skenario ini."
+      />
+    );
+  }
   if (scenario === "empty") return <EmptyState title={emptyTitle} />;
   if (scenario === "server-error") return <ErrorState />;
   if (scenarioCopy[scenario]) return <ScenarioState scenario={scenario} />;
@@ -178,25 +209,31 @@ export function Dialog({
   title,
   description,
   children,
+  contentClassName,
+  open,
+  onOpenChange,
 }: {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   title: string;
   description?: string;
   children: ReactNode;
+  contentClassName?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <DialogPrimitive.Root>
-      <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="dialog-overlay" />
-        <DialogPrimitive.Content className="dialog-content">
+        <DialogPrimitive.Content
+          className={twMerge("dialog-content", contentClassName)}
+        >
           <div className="dialog-heading">
             <div>
               <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
               {description && (
-                <DialogPrimitive.Description>
-                  {description}
-                </DialogPrimitive.Description>
+                <DialogPrimitive.Description>{description}</DialogPrimitive.Description>
               )}
             </div>
             <DialogPrimitive.Close className="icon-button" aria-label="Tutup">
@@ -214,13 +251,7 @@ export const TabsList = TabsPrimitive.List;
 export const TabsTrigger = TabsPrimitive.Trigger;
 export const TabsContent = TabsPrimitive.Content;
 
-export function ProgressSteps({
-  items,
-  active,
-}: {
-  items: string[];
-  active: number;
-}) {
+export function ProgressSteps({ items, active }: { items: string[]; active: number }) {
   return (
     <ol className="progress-steps">
       {items.map((item, index) => (

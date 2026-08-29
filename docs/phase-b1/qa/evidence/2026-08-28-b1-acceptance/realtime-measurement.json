@@ -1,0 +1,27 @@
+{
+  "targetLatencyMs": 2000,
+  "maximumLatencyMs": 88,
+  "measurements": [
+    {
+      "bookingId": "LG-hXOjQ1JJT2EW6ESy",
+      "automaticLatencyMs": 88,
+      "recoveryLatencyMs": null,
+      "maintenanceStatus": null,
+      "maintenanceBody": null
+    },
+    {
+      "bookingId": "LG-wgTNSXqzkBV-iR88",
+      "automaticLatencyMs": 57,
+      "recoveryLatencyMs": null,
+      "maintenanceStatus": null,
+      "maintenanceBody": null
+    },
+    {
+      "bookingId": "LG-KUnpmJgyYxpapnGP",
+      "automaticLatencyMs": 72,
+      "recoveryLatencyMs": null,
+      "maintenanceStatus": null,
+      "maintenanceBody": null
+    }
+  ]
+}

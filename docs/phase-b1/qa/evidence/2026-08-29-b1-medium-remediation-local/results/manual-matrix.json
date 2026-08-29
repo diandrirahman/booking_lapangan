@@ -1,0 +1,16 @@
+{
+  "viewports": ["360x800", "768x1024", "1024x768", "1440x900"],
+  "themes": ["light", "dark"],
+  "screens": {
+    "customerCatalog": 8,
+    "ownerOutstanding": 8,
+    "ownerNoShow": 8,
+    "staffCalendar": 8,
+    "adminAuditSmoke": 8
+  },
+  "totalScreenshots": 40,
+  "horizontalOverflow": 0,
+  "consoleErrors": 0,
+  "consoleWarnings": 0,
+  "api5xx": 0
+}

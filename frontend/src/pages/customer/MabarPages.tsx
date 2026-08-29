@@ -30,8 +30,7 @@ export function MabarListPage() {
     (booking) =>
       booking.status === "confirmed" &&
       !state.mabars.some(
-        (mabar) =>
-          mabar.bookingId === booking.id && mabar.status !== "cancelled",
+        (mabar) => mabar.bookingId === booking.id && mabar.status !== "cancelled",
       ),
   );
   return (
@@ -107,10 +106,7 @@ export function MabarListPage() {
                 <h2>{mabar.title}</h2>
                 <p>
                   <MapPin />
-                  {
-                    state.venues.find((venue) => venue.id === mabar.venueId)
-                      ?.name
-                  }
+                  {state.venues.find((venue) => venue.id === mabar.venueId)?.name}
                 </p>
                 <p>
                   <CalendarDays />
@@ -173,8 +169,8 @@ export function MabarDetailPage() {
           <Card className="detail-section">
             <h2>Tentang permainan</h2>
             <p>
-              Fun match dengan rotasi pemain. Datang 15 menit lebih awal untuk
-              pemanasan dan briefing.
+              Fun match dengan rotasi pemain. Datang 15 menit lebih awal untuk pemanasan
+              dan briefing.
             </p>
           </Card>
         </div>
@@ -328,12 +324,8 @@ export function MabarManagePage() {
         description="Kelola publikasi, peserta, waitlist FIFO, dan pengumuman."
         action={
           <Button
-            disabled={
-              mabar.status === "published" || mabar.status === "cancelled"
-            }
-            onClick={() =>
-              dispatch({ type: "PUBLISH_MABAR", mabarId: mabar.id })
-            }
+            disabled={mabar.status === "published" || mabar.status === "cancelled"}
+            onClick={() => dispatch({ type: "PUBLISH_MABAR", mabarId: mabar.id })}
           >
             {mabar.status === "published" ? "Sudah tayang" : "Publikasikan"}
           </Button>

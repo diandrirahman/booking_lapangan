@@ -17,13 +17,18 @@ import {
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { roleLabels } from "../data/fixtures";
 import { routeRegistry } from "../routes/registry";
 import { usePrototype } from "../store/PrototypeStore";
 import { PrototypeControls } from "./PrototypeControls";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationInbox } from "./NotificationInbox";
+import { AccountMenu } from "./AccountMenu";
+import { prototypeModeEnabled } from "../api/apiClient";
+import { useSession } from "../api/session";
+import { useWorkspaces } from "../api/businessQueries";
+import { SelectField } from "./SelectField";
 
 const customerNav = [
   ["Beranda", "/", Home],
@@ -40,28 +45,42 @@ const businessIcons = [
   WalletCards,
   Users,
 ];
-const adminIcons = [
-  LayoutDashboard,
-  ShieldCheck,
-  Building2,
-  Users,
-  WalletCards,
-  Bell,
-];
+const adminIcons = [LayoutDashboard, ShieldCheck, Building2, Users, WalletCards, Bell];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { state } = usePrototype();
+  const session = useSession();
+  const workspaces = useWorkspaces();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const activeTenant =
     state.tenants.find((tenant) => tenant.id === state.activeTenantId) ??
     state.tenants[0];
+  if (location.pathname === "/login" || location.pathname === "/register") {
+    return <>{children}</>;
+  }
   const shell = location.pathname.startsWith("/admin")
     ? "admin"
     : location.pathname.startsWith("/business")
       ? "business"
       : "customer";
+  const routeTenantId = location.pathname.startsWith("/business/")
+    ? location.pathname.split("/")[2]
+    : undefined;
+  const sessionMembership =
+    session.data?.memberships.find(
+      (membership) => membership.tenantId === routeTenantId,
+    ) ?? session.data?.memberships[0];
+  const staffSession = sessionMembership?.role === "STAFF";
+  const tenantRouteValue = prototypeModeEnabled
+    ? "cendana"
+    : (routeTenantId ?? sessionMembership?.tenantId ?? "workspace");
+  const workspaceName = prototypeModeEnabled
+    ? activeTenant.name
+    : (workspaces.data?.items.find((item) => item.tenantId === tenantRouteValue)
+        ?.name ?? "Workspace bisnis");
   if (shell === "customer")
     return (
       <div className="customer-shell">
@@ -89,7 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Heart />
             </Link>
             <NotificationInbox />
-            <PrototypeControls />
+            {prototypeModeEnabled ? <PrototypeControls /> : <AccountMenu />}
           </div>
         </header>
         <main>{children}</main>
@@ -111,7 +130,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const definitions = routeRegistry.filter(
     (route) =>
       route.shell === shell &&
-      !(state.role === "staff" && route.staff === "forbidden"),
+      (prototypeModeEnabled || !route.path.includes(":venueId")) &&
+      !(
+        (prototypeModeEnabled ? state.role === "staff" : staffSession) &&
+        route.staff === "forbidden"
+      ),
   );
   const grouped = Array.from(
     new Map(
@@ -128,7 +151,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     >
       <div className="sidebar-brand">
         <Link
-          to={shell === "admin" ? "/admin" : "/business/cendana/overview"}
+          to={shell === "admin" ? "/admin" : `/business/${tenantRouteValue}/overview`}
           className="brand"
         >
           <span className="brand-mark">LG</span>
@@ -152,15 +175,38 @@ export function AppShell({ children }: { children: ReactNode }) {
           <X />
         </button>
       </div>
-      {shell === "business" && (
-        <button className="tenant-switch">
-          <span>
-            <small>Workspace aktif</small>
-            {activeTenant.name}
-          </span>
-          <ChevronDown />
-        </button>
-      )}
+      {shell === "business" &&
+        (prototypeModeEnabled ? (
+          <button className="tenant-switch workspace-switcher">
+            <span className="workspace-switcher-icon" aria-hidden="true">
+              <Building2 />
+            </span>
+            <span className="workspace-switcher-copy">
+              <small>Workspace aktif</small>
+              <strong>{workspaceName}</strong>
+            </span>
+            <ChevronDown />
+          </button>
+        ) : (
+          <div className="tenant-switch tenant-switch-select workspace-switcher">
+            <span className="workspace-switcher-icon" aria-hidden="true">
+              <Building2 />
+            </span>
+            <div className="workspace-switcher-copy">
+              <small>Workspace aktif</small>
+              <SelectField
+                ariaLabel="Pilih workspace bisnis"
+                value={tenantRouteValue}
+                variant="embedded"
+                options={(workspaces.data?.items ?? []).map((workspace) => ({
+                  value: workspace.tenantId,
+                  label: workspace.name,
+                }))}
+                onValueChange={(tenantId) => navigate(`/business/${tenantId}/overview`)}
+              />
+            </div>
+          </div>
+        ))}
       <nav aria-label={`Navigasi ${shell}`}>
         {grouped.map(([section, routes], groupIndex) => (
           <div className="nav-group" key={section}>
@@ -168,7 +214,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {routes.map((route, routeIndex) => {
               const Icon = icons[(groupIndex + routeIndex) % icons.length];
               const href = route.path
-                .replace(":tenant", "cendana")
+                .replace(":tenant", tenantRouteValue)
                 .replace(":venueId", "v1");
               return (
                 <NavLink
@@ -188,17 +234,33 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
       <div className="sidebar-footer">
         <span className="avatar">
-          {state.role === "admin" ? "RA" : state.role === "staff" ? "SN" : "AP"}
+          {prototypeModeEnabled
+            ? state.role === "admin"
+              ? "RA"
+              : state.role === "staff"
+                ? "SN"
+                : "AP"
+            : initials(session.data?.user.name ?? "Akun")}
         </span>
         <div>
           <strong>
-            {state.role === "admin"
-              ? "Rani Admin"
-              : state.role === "staff"
-                ? "Sinta N."
-                : "Andika Pratama"}
+            {prototypeModeEnabled
+              ? state.role === "admin"
+                ? "Rani Admin"
+                : state.role === "staff"
+                  ? "Sinta N."
+                  : "Andika Pratama"
+              : (session.data?.user.name ?? "Akun LapanganGo")}
           </strong>
-          <small>{roleLabels[state.role]}</small>
+          <small>
+            {prototypeModeEnabled
+              ? roleLabels[state.role]
+              : sessionMembership?.role === "STAFF"
+                ? "Staff"
+                : sessionMembership
+                  ? "Owner"
+                  : "Customer"}
+          </small>
         </div>
       </div>
     </aside>
@@ -206,9 +268,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="workspace-shell">
       {sidebar}
-      <div
-        className={`workspace-main ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}
-      >
+      <div className={`workspace-main ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
         <header className="workspace-header">
           <button
             className="icon-button mobile-only"
@@ -218,14 +278,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu />
           </button>
           <div className="breadcrumbs">
-            <span>
-              {shell === "admin" ? "Admin Platform" : activeTenant.name}
-            </span>
+            <span>{shell === "admin" ? "Admin Platform" : workspaceName}</span>
             <span>/</span>
             <strong>
-              {definitions.find((route) =>
-                matchPath(route.path, location.pathname),
-              )?.title ?? "Workspace"}
+              {definitions.find((route) => matchPath(route.path, location.pathname))
+                ?.title ?? "Workspace"}
             </strong>
           </div>
           <div className="header-actions">
@@ -233,7 +290,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button className="icon-button" aria-label="Notifikasi">
               <Bell />
             </button>
-            <PrototypeControls />
+            {prototypeModeEnabled ? <PrototypeControls /> : <AccountMenu />}
           </div>
         </header>
         <main className="workspace-content">{children}</main>
@@ -257,4 +314,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 function matchPath(pattern: string, pathname: string) {
   const regex = new RegExp(`^${pattern.replace(/:[^/]+/g, "[^/]+")}$`);
   return regex.test(pathname);
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }

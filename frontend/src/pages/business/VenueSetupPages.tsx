@@ -19,11 +19,12 @@ import {
   TabsTrigger,
 } from "../../components/ui";
 import { usePrototype } from "../../store/PrototypeStore";
+import { formatRupiah, selectVenueSetup, statusLabel } from "../../store/selectors";
+import { serverStateEnabled } from "../../api/apiClient";
 import {
-  formatRupiah,
-  selectVenueSetup,
-  statusLabel,
-} from "../../store/selectors";
+  IntegratedVenueSetupDetailPage,
+  IntegratedVenuesSetupPage,
+} from "./IntegratedVenueSetupPages";
 
 const createVenueSchema = z.object({
   name: z.string().min(3, "Nama venue minimal 3 karakter."),
@@ -87,9 +88,7 @@ function CreateVenueDialog() {
         <label>
           Nama venue
           <Input {...register("name")} placeholder="Contoh: Arena Cendana" />
-          {errors.name && (
-            <span className="field-error">{errors.name.message}</span>
-          )}
+          {errors.name && <span className="field-error">{errors.name.message}</span>}
         </label>
         <label>
           Lokasi
@@ -101,11 +100,9 @@ function CreateVenueDialog() {
         <label>
           Olahraga utama
           <select className="input" {...register("sport")}>
-            {["Badminton", "Futsal", "Padel", "Basket", "Tenis"].map(
-              (sport) => (
-                <option key={sport}>{sport}</option>
-              ),
-            )}
+            {["Badminton", "Futsal", "Padel", "Basket", "Tenis"].map((sport) => (
+              <option key={sport}>{sport}</option>
+            ))}
           </select>
         </label>
         <Button type="submit">Buat dan lanjutkan</Button>
@@ -115,6 +112,14 @@ function CreateVenueDialog() {
 }
 
 export function VenuesSetupPage() {
+  return serverStateEnabled ? (
+    <IntegratedVenuesSetupPage />
+  ) : (
+    <PrototypeVenuesSetupPage />
+  );
+}
+
+function PrototypeVenuesSetupPage() {
   const { state, dispatch } = usePrototype();
   const navigate = useNavigate();
   const tenantVenues = state.venues.filter(
@@ -140,8 +145,7 @@ export function VenuesSetupPage() {
                   tone={
                     venue.status === "published"
                       ? "success"
-                      : venue.status === "revision" ||
-                          venue.status === "rejected"
+                      : venue.status === "revision" || venue.status === "rejected"
                         ? "danger"
                         : "warning"
                   }
@@ -163,22 +167,21 @@ export function VenuesSetupPage() {
                   >
                     Lanjutkan setup
                   </Button>
-                  {venue.status !== "published" &&
-                    venue.status !== "in_review" && (
-                      <Button
-                        disabled={!setup.canSubmit}
-                        title={
-                          setup.canSubmit
-                            ? undefined
-                            : "Lengkapi profil, lapangan, jadwal, harga, dan kebijakan"
-                        }
-                        onClick={() =>
-                          dispatch({ type: "SUBMIT_VENUE", venueId: venue.id })
-                        }
-                      >
-                        Kirim verifikasi
-                      </Button>
-                    )}
+                  {venue.status !== "published" && venue.status !== "in_review" && (
+                    <Button
+                      disabled={!setup.canSubmit}
+                      title={
+                        setup.canSubmit
+                          ? undefined
+                          : "Lengkapi profil, lapangan, jadwal, harga, dan kebijakan"
+                      }
+                      onClick={() =>
+                        dispatch({ type: "SUBMIT_VENUE", venueId: venue.id })
+                      }
+                    >
+                      Kirim verifikasi
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -189,54 +192,53 @@ export function VenuesSetupPage() {
   );
 }
 
-const setupMap: Record<
-  string,
-  { title: string; description: string; active: number }
-> = {
-  profile: {
-    title: "Profil dan media",
-    description: "Informasi dasar, galeri, fasilitas, dan add-on venue.",
-    active: 0,
-  },
-  courts: {
-    title: "Lapangan",
-    description: "Atur jenis olahraga, permukaan, dan status lapangan.",
-    active: 1,
-  },
-  availability: {
-    title: "Jadwal dan ketersediaan",
-    description: "Jam mingguan, pengecualian, block, dan buffer.",
-    active: 2,
-  },
-  pricing: {
-    title: "Aturan harga",
-    description: "Harga dasar, weekday, jam sibuk, dan tanggal khusus.",
-    active: 3,
-  },
-  policies: {
-    title: "Kebijakan venue",
-    description: "Pembayaran, DP, refund, reschedule, dan no-show.",
-    active: 4,
-  },
-};
+const setupMap: Record<string, { title: string; description: string; active: number }> =
+  {
+    profile: {
+      title: "Profil dan media",
+      description: "Informasi dasar, galeri, fasilitas, dan add-on venue.",
+      active: 0,
+    },
+    courts: {
+      title: "Lapangan",
+      description: "Atur jenis olahraga, permukaan, dan status lapangan.",
+      active: 1,
+    },
+    availability: {
+      title: "Jadwal dan ketersediaan",
+      description: "Jam mingguan, pengecualian, block, dan buffer.",
+      active: 2,
+    },
+    pricing: {
+      title: "Aturan harga",
+      description: "Harga dasar, weekday, jam sibuk, dan tanggal khusus.",
+      active: 3,
+    },
+    policies: {
+      title: "Kebijakan venue",
+      description: "Pembayaran, DP, refund, reschedule, dan no-show.",
+      active: 4,
+    },
+  };
 export function VenueSetupDetailPage() {
+  return serverStateEnabled ? (
+    <IntegratedVenueSetupDetailPage />
+  ) : (
+    <PrototypeVenueSetupDetailPage />
+  );
+}
+
+function PrototypeVenueSetupDetailPage() {
   const params = useParams();
   const { state } = usePrototype();
   const navigate = useNavigate();
   const kind =
-    Object.keys(setupMap).find((key) => location.pathname.endsWith(key)) ??
-    "profile";
+    Object.keys(setupMap).find((key) => location.pathname.endsWith(key)) ?? "profile";
   const config = setupMap[kind];
   const venue =
     state.venues.find((item) => item.id === params.venueId) ?? state.venues[0];
   const setup = selectVenueSetup(state, venue.id);
-  const setupOrder = [
-    "profile",
-    "courts",
-    "availability",
-    "pricing",
-    "policies",
-  ];
+  const setupOrder = ["profile", "courts", "availability", "pricing", "policies"];
   const currentIndex = setupOrder.indexOf(kind);
   const previousKind = setupOrder[currentIndex - 1];
   const nextKind = setupOrder[currentIndex + 1];
@@ -249,14 +251,7 @@ export function VenueSetupDetailPage() {
         action={<Badge tone="success">Tersimpan otomatis</Badge>}
       />
       <ProgressSteps
-        items={[
-          "Profil",
-          "Lapangan",
-          "Jadwal",
-          "Harga",
-          "Kebijakan",
-          "Verifikasi",
-        ]}
+        items={["Profil", "Lapangan", "Jadwal", "Harga", "Kebijakan", "Verifikasi"]}
         active={config.active}
       />
       <Card className="form-card wide">
@@ -294,9 +289,7 @@ export function VenueSetupDetailPage() {
         </Button>
         {nextKind ? (
           <Button
-            onClick={() =>
-              navigate(`/business/cendana/venues/${venue.id}/${nextKind}`)
-            }
+            onClick={() => navigate(`/business/cendana/venues/${venue.id}/${nextKind}`)}
           >
             Lanjutkan
           </Button>
@@ -441,9 +434,19 @@ function SetupForm({ kind, venueId }: { kind: string; venueId: string }) {
                 />
                 {day}
               </label>
-              <input type="time" value={hours.opensAt} readOnly />
-              <span>—</span>
-              <input type="time" value={hours.closesAt} readOnly />
+              <input
+                aria-label={`Jam buka ${day}`}
+                type="time"
+                value={hours.opensAt}
+                readOnly
+              />
+              <span aria-hidden="true">—</span>
+              <input
+                aria-label={`Jam tutup ${day}`}
+                type="time"
+                value={hours.closesAt}
+                readOnly
+              />
             </div>
           ))}
         </div>

@@ -7,10 +7,7 @@ export function shellForRole(role: PrototypeRole): Shell {
   return "business";
 }
 
-export function canAccessRoute(
-  role: PrototypeRole,
-  route: RouteDefinition,
-): boolean {
+export function canAccessRoute(role: PrototypeRole, route: RouteDefinition): boolean {
   if (route.shell !== shellForRole(role)) return false;
   return !(role === "staff" && route.staff === "forbidden");
 }

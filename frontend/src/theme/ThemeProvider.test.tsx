@@ -20,9 +20,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Aktifkan mode gelap" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Aktifkan mode gelap" }));
 
     await waitFor(() => {
       expect(document.documentElement.dataset.theme).toBe("dark");

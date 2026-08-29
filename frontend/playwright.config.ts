@@ -1,13 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const externalServers = process.env.PLAYWRIGHT_EXTERNAL_SERVERS === "true";
+
 export default defineConfig({
   testDir: "./e2e",
+  testMatch: "phase-a.spec.ts",
+  fullyParallel: false,
+  workers: 1,
   use: { baseURL: "http://127.0.0.1:4173", trace: "on-first-retry" },
-  webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: true,
-  },
+  webServer: externalServers
+    ? undefined
+    : {
+        command:
+          "node ../node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173 --strictPort",
+        url: "http://127.0.0.1:4173",
+        reuseExistingServer: false,
+      },
   projects: [
     {
       name: "mobile",

@@ -1,0 +1,11 @@
+{
+  "role": "customer",
+  "viewport": "landscape-1024x768",
+  "lightHasHorizontalOverflow": false,
+  "darkHasHorizontalOverflow": false,
+  "keyboardFocusPassed": true,
+  "lightAccessibilityViolations": [],
+  "darkAccessibilityViolations": [],
+  "pageErrors": [],
+  "serverErrors": []
+}

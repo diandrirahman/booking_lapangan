@@ -4,7 +4,6 @@ import {
   FileClock,
   MessageSquareText,
   Plus,
-  Search,
   Settings2,
   Tag,
   Users,
@@ -23,8 +22,7 @@ import {
 import type { RouteDefinition } from "../routes/registry";
 import { usePrototype } from "../store/PrototypeStore";
 
-type DomainSource =
-  "bookings" | "venues" | "mabars" | "notifications" | "static";
+type DomainSource = "bookings" | "venues" | "mabars" | "notifications" | "static";
 
 interface DomainScreenDefinition {
   description: string;
@@ -250,11 +248,7 @@ const domainScreens: Record<string, DomainScreenDefinition> = {
     "Telusuri perubahan state penting pada prototype.",
     "Ekspor tampilan",
     "static",
-    [
-      "Venue v6 diajukan",
-      "Booking BK-0008 check-in",
-      "Promo MAINTERUS diperbarui",
-    ],
+    ["Venue v6 diajukan", "Booking BK-0008 check-in", "Promo MAINTERUS diperbarui"],
     "Belum ada audit event.",
   ),
   "/admin/config/notifications": screen(
@@ -318,6 +312,7 @@ export function SupportingPage({ route }: { route: RouteDefinition }) {
   const { state } = usePrototype();
   const [query, setQuery] = useState("");
   const [actionMessage, setActionMessage] = useState("");
+  const [itemsCleared, setItemsCleared] = useState(false);
   const definition = domainScreens[route.path];
   if (!definition) {
     return (
@@ -327,12 +322,25 @@ export function SupportingPage({ route }: { route: RouteDefinition }) {
       />
     );
   }
-  const Icon =
-    iconBySection[route.section as keyof typeof iconBySection] ?? Bell;
-  const items = resolveItems(definition, state);
+  const Icon = iconBySection[route.section as keyof typeof iconBySection] ?? Bell;
+  const sourceItems = resolveItems(definition, state);
+  const items = itemsCleared ? [] : sourceItems;
   const filteredItems = items.filter((item) =>
     item.toLowerCase().includes(query.toLowerCase()),
   );
+  const needsAttention = items.filter((item) =>
+    /menunggu|ditahan|degraded|bukti|laporan/i.test(item),
+  ).length;
+
+  function runPrimaryAction(): void {
+    if (definition.action.toLowerCase().includes("bersihkan")) {
+      setItemsCleared(true);
+      setActionMessage("Riwayat pada tab ini sudah dibersihkan.");
+      return;
+    }
+    setActionMessage(`${definition.action} berhasil disimulasikan pada data lokal.`);
+  }
+
   return (
     <>
       <PageTitle
@@ -340,11 +348,7 @@ export function SupportingPage({ route }: { route: RouteDefinition }) {
         title={route.title}
         description={definition.description}
         action={
-          <Button
-            onClick={() =>
-              setActionMessage(`${definition.action} berhasil disimulasikan.`)
-            }
-          >
+          <Button onClick={runPrimaryAction}>
             <Plus /> {definition.action}
           </Button>
         }
@@ -359,15 +363,25 @@ export function SupportingPage({ route }: { route: RouteDefinition }) {
         emptyTitle={`Belum ada ${route.title.toLowerCase()}`}
       >
         <div className="supporting-layout">
-          <Card className="supporting-summary">
-            <Icon />
-            <div>
-              <span>Total data</span>
+          <div className="supporting-kpi-strip" aria-label="Ringkasan halaman">
+            <Card>
+              <span>Total</span>
               <strong>{items.length}</strong>
-              <small>Fixture khusus {route.title.toLowerCase()}</small>
-            </div>
-            {definition.simulation && <SimulasiLabel />}
-          </Card>
+              <small>{route.title}</small>
+            </Card>
+            <Card>
+              <span>Perlu perhatian</span>
+              <strong>{needsAttention}</strong>
+              <small>Berdasarkan status data</small>
+            </Card>
+            <Card>
+              <span>Sumber</span>
+              <strong>{definition.simulation ? "Simulasi" : "Lokal"}</strong>
+              <small>
+                {definition.simulation ? "Bukan transaksi nyata" : "Data prototype"}
+              </small>
+            </Card>
+          </div>
           <Card className="data-card">
             <div className="table-toolbar">
               <Input
@@ -376,24 +390,34 @@ export function SupportingPage({ route }: { route: RouteDefinition }) {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
-              <Button variant="secondary">
-                <Search /> Cari
-              </Button>
+              {definition.simulation && <SimulasiLabel />}
             </div>
-            {filteredItems.map((item, index) => (
-              <div className="domain-row" key={item}>
-                <span className="domain-icon">
-                  <Icon />
-                </span>
-                <span>
-                  <strong>{item}</strong>
-                  <small>{route.section} · data lokal</small>
-                </span>
-                <Badge tone={index === 0 ? "warning" : "success"}>
-                  {index === 0 ? "Perlu tinjauan" : "Aktif"}
-                </Badge>
+            {filteredItems.length > 0 && (
+              <div className="domain-table-header" aria-hidden="true">
+                <span>Data</span>
+                <span>Konteks</span>
+                <span>Status</span>
               </div>
-            ))}
+            )}
+            {filteredItems.map((item) => {
+              const presentation = presentDomainItem(item);
+              return (
+                <div className="domain-row" key={item}>
+                  <span className="domain-icon">
+                    <Icon />
+                  </span>
+                  <span>
+                    <strong>{presentation.title}</strong>
+                    <small>
+                      {route.section} ·{" "}
+                      {definition.simulation ? "simulasi" : "data lokal"}
+                    </small>
+                  </span>
+                  <span className="domain-context">{presentation.detail}</span>
+                  <Badge tone={presentation.tone}>{presentation.status}</Badge>
+                </div>
+              );
+            })}
             {!filteredItems.length && (
               <EmptyState
                 title={`Belum ada ${route.title.toLowerCase()}`}
@@ -407,6 +431,27 @@ export function SupportingPage({ route }: { route: RouteDefinition }) {
   );
 }
 
+function presentDomainItem(item: string): {
+  title: string;
+  detail: string;
+  status: string;
+  tone: "success" | "warning" | "danger" | "info" | "neutral";
+} {
+  const [title, ...details] = item.split(" · ");
+  const detail = details.join(" · ") || "Data tersedia";
+  const normalizedDetail = detail.toLowerCase();
+  if (/gagal|ditolak|degraded|ditahan/.test(normalizedDetail)) {
+    return { title, detail, status: "Perlu tindakan", tone: "danger" };
+  }
+  if (/menunggu|pending|terjadwal|bukti|laporan/.test(normalizedDetail)) {
+    return { title, detail, status: "Perlu tinjauan", tone: "warning" };
+  }
+  if (/simulasi/.test(normalizedDetail)) {
+    return { title, detail, status: "Simulasi", tone: "info" };
+  }
+  return { title, detail, status: "Aktif", tone: "success" };
+}
+
 function resolveItems(
   definition: DomainScreenDefinition,
   state: ReturnType<typeof usePrototype>["state"],
@@ -416,13 +461,9 @@ function resolveItems(
       .slice(0, 6)
       .map((booking) => `${booking.id} · ${booking.date} · ${booking.status}`);
   if (definition.source === "venues")
-    return state.venues
-      .slice(0, 6)
-      .map((venue) => `${venue.name} · ${venue.status}`);
+    return state.venues.slice(0, 6).map((venue) => `${venue.name} · ${venue.status}`);
   if (definition.source === "mabars")
-    return state.mabars
-      .slice(0, 6)
-      .map((mabar) => `${mabar.title} · ${mabar.status}`);
+    return state.mabars.slice(0, 6).map((mabar) => `${mabar.title} · ${mabar.status}`);
   if (definition.source === "notifications")
     return state.notifications
       .slice(0, 6)

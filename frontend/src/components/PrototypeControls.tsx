@@ -57,9 +57,10 @@ export function PrototypeControls() {
             <label>Peran aktif</label>
             <SelectField
               ariaLabel="Peran aktif"
-              options={(Object.keys(roleLabels) as PrototypeRole[]).map(
-                (role) => ({ value: role, label: roleLabels[role] }),
-              )}
+              options={(Object.keys(roleLabels) as PrototypeRole[]).map((role) => ({
+                value: role,
+                label: roleLabels[role],
+              }))}
               value={state.role}
               onValueChange={(value) => switchRole(value as PrototypeRole)}
             />
@@ -83,10 +84,7 @@ export function PrototypeControls() {
           </div>
           <div className="sandbox-panel">
             <strong>Sandbox Phase A</strong>
-            <p>
-              Pembayaran, refund, saldo, payout, dan dokumen legal hanya
-              simulasi.
-            </p>
+            <p>Pembayaran, refund, saldo, payout, dan dokumen legal hanya simulasi.</p>
           </div>
           <Button
             variant="secondary"

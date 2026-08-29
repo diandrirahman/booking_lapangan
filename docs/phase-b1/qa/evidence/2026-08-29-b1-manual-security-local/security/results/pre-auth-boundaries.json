@@ -1,0 +1,45 @@
+{
+  "environment": "localhost-development-boundary",
+  "results": [
+    { "case": "security-headers", "status": 200, "result": "pass" },
+    { "case": "unauthenticated-me", "status": 401, "result": "pass" },
+    { "case": "invalid-login", "status": 401, "result": "pass" },
+    { "case": "forged-origin", "status": 403, "result": "pass" },
+    { "case": "malformed-input", "status": 422, "result": "pass" },
+    {
+      "case": "oversized-json",
+      "status": 500,
+      "result": "fail",
+      "finding": "B1-SEC-LOCAL-002"
+    },
+    { "case": "sql-metachar-search", "status": 200, "result": "pass" },
+    { "case": "xss-search", "status": 200, "result": "pass" },
+    {
+      "case": "controlled-rate-limit",
+      "status": 429,
+      "result": "pass",
+      "first429InBurst": 113,
+      "requestsBeforeBurst": 8,
+      "configuredLimitPerMinute": 120
+    },
+    { "case": "sse-without-session", "status": 401, "result": "pass" },
+    { "case": "invalid-cron-secret", "status": 401, "result": "pass" },
+    {
+      "case": "invalid-webhook-signature-test-mode",
+      "status": 401,
+      "result": "pass"
+    },
+    {
+      "case": "midtrans-webhook-development-mode",
+      "status": 403,
+      "result": "fail",
+      "finding": "B1-SEC-LOCAL-001"
+    },
+    {
+      "case": "frontend-build-secret-pattern-scan",
+      "result": "pass",
+      "matchedPatterns": []
+    }
+  ],
+  "redaction": "No password, cookie, session token, provider key, or authorization value is stored."
+}

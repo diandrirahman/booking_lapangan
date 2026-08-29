@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateCheckoutTotals } from "./checkout";
+import { calculateCheckoutTotals, calculateServerCheckoutPreview } from "./checkout";
 
 describe("checkout totals", () => {
   it("menghitung add-on, promo, dan DP dari total yang sama", () => {
@@ -21,5 +21,12 @@ describe("checkout totals", () => {
       promoApplied: false,
     });
     expect(totals.dueNow).toBe(0);
+  });
+
+  it("menghitung preview DP API sebesar 50%", () => {
+    const totals = calculateServerCheckoutPreview(235_000, "DP");
+
+    expect(totals.total).toBe(235_000);
+    expect(totals.dueNow).toBe(117_500);
   });
 });

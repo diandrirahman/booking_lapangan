@@ -1,0 +1,16 @@
+{
+  "scope": "localhost-only",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/auth/register",
+    "bodyBytes": 1048588,
+    "credentialsIncluded": false
+  },
+  "response": {
+    "status": 413,
+    "code": "PAYLOAD_TOO_LARGE",
+    "message": "Ukuran data melebihi batas 1 MB.",
+    "requestId": "req_[redacted]"
+  },
+  "routerReached": false
+}

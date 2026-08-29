@@ -65,9 +65,7 @@ export function SelectField({
                 <SelectPrimitive.ItemIndicator className="select-indicator">
                   <Check aria-hidden="true" />
                 </SelectPrimitive.ItemIndicator>
-                <SelectPrimitive.ItemText>
-                  {option.label}
-                </SelectPrimitive.ItemText>
+                <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>

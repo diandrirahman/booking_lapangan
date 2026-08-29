@@ -29,13 +29,13 @@ Spesifikasi produk, halaman, state machine, real-time, acceptance criteria, dan 
 | **Elemen**      | **Nilai**                                                                       |
 |-----------------|---------------------------------------------------------------------------------|
 | Pemilik dokumen | Product Owner / Product Engineering                                             |
-| Versi           | 1.0                                                                             |
+| Versi           | 1.1                                                                             |
 | Status          | Baseline implementasi disetujui                                                 |
 | Rujukan bisnis  | LapanganGo BRD v1.0                                                             |
 | Rujukan data    | LapanganGo ERD Phase B v1.0                                                     |
 | Fase            | A Prototype; B1 Core Booking; B2 Finance & Operations; B3 Mabar & Engagement    |
 | Deployment demo | React/Express pada Vercel; managed MySQL/Redis/object storage; Midtrans Sandbox |
-| Release gate    | Automated evidence + QA manual Project Owner                                    |
+| Release gate    | Local readiness wajib lulus sebelum staging/deploy dan QA Project Owner          |
 
 > [!NOTE]
 > **Change control**
@@ -73,6 +73,7 @@ Spesifikasi produk, halaman, state machine, real-time, acceptance criteria, dan 
   - [7.7 Payment Sandbox](#77-payment-sandbox)
   - [7.8 Owner/Admin Operations](#78-owneradmin-operations)
   - [7.9 B1 Critical Flow](#79-b1-critical-flow)
+  - [7.10 B1 Local Readiness Gate](#710-b1-local-readiness-gate)
 - [8. Phase B2 - Finance and Operations](#8-phase-b2-finance-and-operations)
   - [8.1 Commission dan Trial](#81-commission-dan-trial)
   - [8.2 Promotion](#82-promotion)
@@ -132,6 +133,7 @@ PRD ini menerjemahkan baseline bisnis LapanganGo menjadi requirement implementas
 | **Tenant isolation by default**      | Tenant/user/venue scope dibawa pada setiap read, write, event, dan export.  |
 | **Realtime is enhancement**          | SSE meningkatkan UX; REST dan server state tetap authoritative.             |
 | **Prototype before infrastructure**  | Phase A memvalidasi alur; backend baru dimulai setelah QA manual.           |
+| **Local readiness before deployment** | Implementasi dan QA lokal ditutup sebelum staging atau deploy dimulai.      |
 | **Sandbox is visibly sandbox**       | Tidak ada layar atau laporan yang mengesankan uang nyata.                   |
 | **Scale through boundaries**         | Domain service, repository, adapter provider, outbox, dan feature-based UI. |
 
@@ -179,7 +181,19 @@ Gambar 1. Arsitektur demo Phase B.
 
 ### 2.1 Deployment Boundary
 
+Bagian ini menentukan target runtime demo, bukan urutan pengerjaan. Provisioning,
+staging, dan deploy hanya dimulai setelah **B1 Local Readiness Gate** pada bagian 7.10
+lulus dan hasilnya dicatat. Ketersediaan provider cloud tidak boleh dipakai untuk
+menandai requirement lokal selesai atau mengalihkan fokus sebelum blocker lokal nol.
+
 ```text
+Urutan delivery:
+- Implementasi lokal
+- Automated QA dan manual QA lokal
+- Local readiness accepted
+- Provisioning/deploy staging
+- QA staging dan Project Owner sign-off
+
 Demo:
 - Frontend React -> Vercel
 - Express API / SSE / jobs -> Vercel Functions
@@ -564,6 +578,38 @@ Arah visual adalah marketplace olahraga modern, bersih, profesional, ringan, dan
 >
 > Menambahkan commission, promo, refund, ledger, permission, trust, dan reporting.
 
+### 7.10 B1 Local Readiness Gate
+
+B1 harus diselesaikan dan dibuktikan pada environment lokal sebelum provisioning,
+staging, atau deploy dikerjakan. Provider eksternal boleh memakai adapter sandbox,
+emulator, atau test double selama kontrak, validasi, authorization, idempotency, dan
+failure path tetap diuji. Pengujian provider nyata dilakukan kemudian pada staging.
+
+Local readiness dinyatakan lulus hanya jika:
+
+1. Seluruh 67 requirement B1 mempunyai implementasi lokal dan status traceability yang
+   dapat dibuktikan; tidak ada `missing` atau `partial` lokal.
+2. Migration dapat dijalankan dari database MySQL 8 kosong dan seed realistis dapat
+   dijalankan ulang tanpa fixture drift.
+3. Unit, integration, security, concurrency, API contract, E2E, route smoke, formatter,
+   lint, type-check, dan production build lokal lulus.
+4. Lima puluh request pada slot yang sama menghasilkan maksimal satu active reservation,
+   dan duplicate webhook/event tidak menggandakan state.
+5. Customer, Owner, Staff, dan Admin lulus pada 360x800, 768x1024, 1024x768, dan
+   1440x900 dalam light/dark mode tanpa overflow, browser error, API 5xx, atau temuan
+   accessibility serius/kritis.
+6. Realtime lokal memenuhi core maksimal dua detik, reconnect/resync/REST fallback
+   terbukti, dan kegagalan Redis tidak membatalkan booking atau payment authoritative.
+7. Bukti test, screenshot, known limitations, traceability, serta temuan QA diperbarui;
+   blocker lokal berjumlah nol.
+8. Project Owner meninjau hasil lokal dan menyatakan B1 siap masuk staging. Persetujuan
+   ini adalah izin memulai validasi staging, bukan sign-off akhir B1.
+
+Sebelum delapan kondisi tersebut terpenuhi, pekerjaan staging/deploy tidak menjadi
+prioritas dan tidak boleh menggantikan penyelesaian defect lokal. Perubahan konfigurasi
+cloud yang sudah terlanjur tersedia boleh dipertahankan, tetapi tidak dianggap sebagai
+bukti local readiness.
+
 ## 8. Phase B2 - Finance and Operations
 
 ### 8.1 Commission dan Trial
@@ -930,13 +976,19 @@ stateDiagram-v2
 
 ### 13.2 Release Gates
 
-| **Gate**          | **Must Pass**                                                                                           |
-|-------------------|---------------------------------------------------------------------------------------------------------|
-| A -> B1          | Prototype requirements complete; manual QA accepted; design debt logged.                                |
-| B1 -> B2         | No double booking evidence; core E2E; webhook idempotency; tenant isolation; realtime fallback.         |
-| B2 -> B3         | Ledger balance/explainability; refund/reschedule; commission/promo; permission; export; sandbox labels. |
-| B3 complete       | Mabar capacity/seat concurrency; cancellation propagation; engagement features; full regression.        |
-| Future production | Legal/provider/KYC review; real settlement design; infra/SLA/runbook/backup/monitoring.                 |
+| **Gate**                     | **Must Pass**                                                                                           |
+|------------------------------|---------------------------------------------------------------------------------------------------------|
+| A -> B1                     | Prototype requirements complete; manual QA accepted; design debt logged.                                |
+| B1 local readiness          | Seluruh kondisi bagian 7.10 lulus; blocker lokal nol; Project Owner menyatakan siap staging.            |
+| B1 staging acceptance       | Deploy sehat; provider sandbox terverifikasi; QA staging dan realtime SLO lulus; sign-off Project Owner. |
+| B1 -> B2                    | Local readiness dan staging acceptance lulus; no double booking dan tenant isolation tetap terbukti.    |
+| B2 -> B3                    | Ledger balance/explainability; refund/reschedule; commission/promo; permission; export; sandbox labels. |
+| B3 complete                  | Mabar capacity/seat concurrency; cancellation propagation; engagement features; full regression.        |
+| Future production            | Legal/provider/KYC review; real settlement design; infra/SLA/runbook/backup/monitoring.                  |
+
+Staging adalah tahap validasi setelah kesiapan lokal, bukan cara untuk menyelesaikan
+implementasi lokal. Kegagalan staging dicatat sebagai defect environment/integration dan
+tidak boleh menutupi regression lokal yang belum ditutup.
 
 ### 13.3 Master Acceptance Criteria
 

@@ -1,0 +1,11 @@
+{
+  "role": "admin",
+  "viewport": "mobile-360x800",
+  "lightHasHorizontalOverflow": false,
+  "darkHasHorizontalOverflow": false,
+  "keyboardFocusPassed": true,
+  "lightAccessibilityViolations": [],
+  "darkAccessibilityViolations": [],
+  "pageErrors": [],
+  "serverErrors": []
+}

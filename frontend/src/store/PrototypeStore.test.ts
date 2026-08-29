@@ -106,12 +106,8 @@ describe("prototypeReducer", () => {
       venueId: "v6",
       decision: "approve",
     });
-    expect(next.venues.find((venue) => venue.id === "v6")?.status).toBe(
-      "published",
-    );
-    expect(next.tenants.find((tenant) => tenant.id === "t3")?.status).toBe(
-      "verified",
-    );
+    expect(next.venues.find((venue) => venue.id === "v6")?.status).toBe("published");
+    expect(next.tenants.find((tenant) => tenant.id === "t3")?.status).toBe("verified");
   });
 
   it("menambah dan menghapus favorit tanpa duplikasi", () => {
@@ -127,17 +123,13 @@ describe("prototypeReducer", () => {
       resource: "venue",
       resourceId: "v1",
     });
-    expect(restored.favoriteVenueIds.filter((id) => id === "v1")).toHaveLength(
-      1,
-    );
+    expect(restored.favoriteVenueIds.filter((id) => id === "v1")).toHaveLength(1);
   });
 
   it("menandai seluruh notifikasi sebagai sudah dibaca", () => {
     const next = prototypeReducer(initialState, {
       type: "MARK_ALL_NOTIFICATIONS_READ",
     });
-    expect(next.notifications.every((notification) => notification.read)).toBe(
-      true,
-    );
+    expect(next.notifications.every((notification) => notification.read)).toBe(true);
   });
 });

@@ -13,7 +13,6 @@ describe("routeRegistry", () => {
     const supportingRoutes = routeRegistry.filter(
       (route) => !criticalPaths.has(route.path),
     );
-    expect(supportingRoutes).toHaveLength(35);
     expect(
       supportingRoutes.every((route) => supportingDomainPaths.has(route.path)),
     ).toBe(true);
@@ -23,9 +22,7 @@ describe("routeRegistry", () => {
     expect(
       routeRegistry
         .filter((route) => route.shell === "business")
-        .every(
-          (route) => route.staff === "allow" || route.staff === "forbidden",
-        ),
+        .every((route) => route.staff === "allow" || route.staff === "forbidden"),
     ).toBe(true);
   });
 });

@@ -17,9 +17,7 @@ export function selectVenueSetup(state: PrototypeState, venueId: string) {
       draft?.contact.trim() &&
       draft.mediaReady,
     ),
-    courts: state.courts.some(
-      (court) => court.venueId === venueId && court.active,
-    ),
+    courts: state.courts.some((court) => court.venueId === venueId && court.active),
     availability: Boolean(
       draft && Object.values(draft.schedule).some((day) => day.enabled),
     ),

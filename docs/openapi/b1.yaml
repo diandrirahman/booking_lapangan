@@ -1,0 +1,2348 @@
+openapi: 3.1.0
+info:
+  title: LapanganGo Phase B1 API
+  version: 1.0.0
+  description: API demo sandbox untuk core booking LapanganGo.
+x-lapangango-global-json-responses:
+  "413":
+    $ref: "#/components/responses/PayloadTooLarge"
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+tags:
+  - name: Health
+  - name: Auth
+  - name: Venues
+  - name: Bookings
+  - name: Payments
+  - name: Business
+  - name: Admin
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      operationId: getLiveness
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /health/ready:
+    get:
+      tags: [Health]
+      operationId: getReadiness
+      responses:
+        "200":
+          description: Dependencies are ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: User and session created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "200":
+          description: Session created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications:
+    get:
+      tags: [Auth]
+      operationId: listNotifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Notification feed for the active customer account.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AccountNotification" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications/{notificationId}/read:
+    patch:
+      tags: [Auth]
+      operationId: markNotificationRead
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      responses:
+        "204": { description: Notification marked as read. }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /notifications/read-all:
+    post:
+      tags: [Auth]
+      operationId: markAllNotificationsRead
+      responses:
+        "204": { description: All account notifications marked as read. }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      responses:
+        "204":
+          description: Session ended.
+  /auth/google/link/start:
+    post:
+      tags: [Auth]
+      operationId: startGoogleAccountLink
+      summary: Reauthenticate and start Google account linking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "200":
+          description: Short-lived Google authorization URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorizationUrl]
+                properties:
+                  authorizationUrl: { type: string, format: uri }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/InternalError"
+  /me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: Active identity and workspaces.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /venues:
+    get:
+      tags: [Venues]
+      operationId: searchVenues
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: query
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: area
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: cityCode
+          in: query
+          schema: { type: string, maxLength: 10 }
+        - name: sport
+          in: query
+          schema: { type: string }
+        - name: facilities
+          in: query
+          description: Daftar slug fasilitas dipisahkan koma; seluruh fasilitas wajib tersedia.
+          schema: { type: string }
+        - name: date
+          in: query
+          schema: { type: string, format: date }
+        - name: time
+          in: query
+          schema: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+        - name: minimumPrice
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: maximumPrice
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: indoorOutdoorType
+          in: query
+          schema: { type: string, enum: [INDOOR, OUTDOOR, MIXED] }
+        - name: paymentMode
+          in: query
+          schema: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
+        - name: hasPromo
+          in: query
+          schema: { type: boolean }
+        - name: minimumRating
+          in: query
+          schema: { type: number, minimum: 0, maximum: 5 }
+        - name: latitude
+          in: query
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: longitude
+          in: query
+          schema: { type: number, minimum: -180, maximum: 180 }
+        - name: maximumDistanceKm
+          in: query
+          schema: { type: number, exclusiveMinimum: 0, maximum: 100 }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [RELEVANT, NEAREST, PRICE_LOWEST, RATING_HIGHEST, POPULAR, NEWEST]
+            default: RELEVANT
+      responses:
+        "200":
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VenuePage"
+  /venues/{slug}:
+    get:
+      tags: [Venues]
+      operationId: getVenue
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      responses:
+        "200":
+          description: Venue detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /availability:
+    get:
+      tags: [Venues]
+      operationId: getAvailability
+      parameters:
+        - name: courtId
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/BookingReference" }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Authoritative slots and price previews.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, version]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AvailabilitySlot" }
+                  version: { type: integer }
+  /bookings:
+    get:
+      tags: [Bookings]
+      operationId: listCustomerBookings
+      responses:
+        "200":
+          description: Bookings owned by the authenticated customer.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CustomerBookingSummary" }
+    post:
+      tags: [Bookings]
+      operationId: createBookingHold
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingInput"
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Booking hold created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /bookings/{bookingId}:
+    get:
+      tags: [Bookings]
+      operationId: getBooking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Booking snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /payment-attempts:
+    post:
+      tags: [Payments]
+      operationId: createPaymentAttempt
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId, kind]
+              properties:
+                bookingId: { $ref: "#/components/schemas/BookingReference" }
+                kind:
+                  type: string
+                  enum: [FULL, DP, RESERVATION, BALANCE]
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Sandbox payment attempt created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentAttempt"
+  /payment-attempts/{attemptId}:
+    get:
+      tags: [Payments]
+      operationId: getPaymentAttempt
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Payment attempt snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentAttempt"
+  /payment-attempts/{attemptId}/simulate:
+    post:
+      tags: [Payments]
+      operationId: simulatePaymentAttempt
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result: { type: string, enum: [success, pending, failed, expired] }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Sandbox result accepted. }
+  /business/workspaces:
+    get:
+      tags: [Business]
+      operationId: listWorkspaces
+      responses:
+        "200":
+          description: Active business workspaces for the current identity.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Workspace" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /business/tenants:
+    post:
+      tags: [Business]
+      operationId: createTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 3, maxLength: 80 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Draft tenant and Primary Owner membership created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /business/pricing-rules:
+    post:
+      tags: [Business]
+      operationId: createPriceRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePriceRuleInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Price rule created after overlap validation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { $ref: "#/components/schemas/PublicId" }
+  /business/venues/{venueId}/media/signed-upload:
+    post:
+      tags: [Business]
+      operationId: createVenueSignedUpload
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSignedUploadInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Short-lived object storage upload URL scoped to an Owner venue.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignedUpload" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/audit:
+    get:
+      tags: [Admin]
+      operationId: listAdminAudit
+      parameters:
+        - name: cursor
+          in: query
+          schema: { $ref: "#/components/schemas/PublicId" }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - name: action
+          in: query
+          schema: { type: string, maxLength: 64 }
+        - name: resourceType
+          in: query
+          schema: { type: string, maxLength: 32 }
+        - name: tenantId
+          in: query
+          schema: { $ref: "#/components/schemas/PublicId" }
+        - name: venueId
+          in: query
+          schema: { $ref: "#/components/schemas/PublicId" }
+        - name: actorUserId
+          in: query
+          schema: { $ref: "#/components/schemas/PublicId" }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Immutable platform activity explorer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAuditPage" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /business/pricing-preview:
+    post:
+      tags: [Business]
+      operationId: previewPricing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PricingPreviewInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "200":
+          description: Resolved price and selected rule for every sample.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingPreviewResult" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /admin/masters:
+    get:
+      tags: [Admin]
+      operationId: getAdminMasters
+      responses:
+        "200":
+          description: Platform master configuration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminMasters" }
+  /admin/masters/{kind}:
+    post:
+      tags: [Admin]
+      operationId: createAdminNamedMaster
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string, enum: [sport, facility] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 50 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201": { description: Master option created. }
+  /admin/masters/{kind}/{id}:
+    patch:
+      tags: [Admin]
+      operationId: updateAdminNamedMaster
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string, enum: [sport, facility] }
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: { type: boolean }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Master active state updated. }
+  /admin/masters/durations/{kind}:
+    post:
+      tags: [Admin]
+      operationId: createAdminDurationOption
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string, enum: [interval, buffer] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [minutes]
+              properties:
+                minutes: { type: integer, minimum: 0, maximum: 360 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201": { description: Duration option created. }
+  /admin/masters/payment-options:
+    post:
+      tags: [Admin]
+      operationId: createAdminPaymentOption
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, label]
+              properties:
+                code: { type: string, minLength: 2, maxLength: 24 }
+                label: { type: string, minLength: 2, maxLength: 50 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201": { description: Payment option created. }
+  /admin/masters/payment-options/{id}:
+    patch:
+      tags: [Admin]
+      operationId: updateAdminPaymentOption
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: { type: boolean }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Payment option active state updated. }
+  /business/tenants/transfer-primary-owner:
+    post:
+      tags: [Business]
+      operationId: transferPrimaryOwner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, targetMembershipId, reason]
+              properties:
+                tenantId: { $ref: "#/components/schemas/PublicId" }
+                targetMembershipId: { $ref: "#/components/schemas/PublicId" }
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Primary Owner transferred transactionally. }
+  /business/tenants/{tenantId}/members:
+    get:
+      tags: [Business]
+      operationId: listWorkspaceMembers
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Tenant membership and Staff assignments.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/WorkspaceMember" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Business]
+      operationId: addWorkspaceMember
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email }
+                role: { type: string, enum: [OWNER, STAFF] }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Existing registered user added to workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [membershipId]
+                properties:
+                  membershipId: { $ref: "#/components/schemas/PublicId" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /business/tenants/{tenantId}/staff/{membershipId}/assignments:
+    put:
+      tags: [Business]
+      operationId: updateStaffAssignments
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - name: membershipId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [venueIds]
+              properties:
+                venueIds:
+                  type: array
+                  items: { $ref: "#/components/schemas/PublicId" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Assignments replaced. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /business/setup-masters:
+    get:
+      tags: [Business]
+      operationId: getBusinessSetupMasters
+      responses:
+        "200":
+          description: Active master configuration for venue setup.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupMasters" }
+  /business/venues:
+    get:
+      tags: [Business]
+      operationId: listBusinessVenues
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+      responses:
+        "200":
+          description: Venues visible in the active workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/VenueSetupSummary" }
+    post:
+      tags: [Business]
+      operationId: createBusinessVenue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, name]
+              properties:
+                tenantId: { $ref: "#/components/schemas/PublicId" }
+                name: { type: string, minLength: 3, maxLength: 80 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Private venue draft created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, slug]
+                properties:
+                  id: { $ref: "#/components/schemas/PublicId" }
+                  slug: { type: string }
+  /business/venues/{venueId}:
+    get:
+      tags: [Business]
+      operationId: getBusinessVenue
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+        - $ref: "#/components/parameters/TenantIdQuery"
+      responses:
+        "200":
+          description: Complete venue setup read model.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VenueSetupDetail" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /business/venues/{venueId}/profile:
+    put:
+      tags: [Business]
+      operationId: updateBusinessVenueProfile
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VenueProfileInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Profile saved. }
+  /business/venues/{venueId}/catalog:
+    put:
+      tags: [Business]
+      operationId: updateBusinessVenueCatalog
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, sportIds, facilityIds]
+              properties:
+                tenantId: { $ref: "#/components/schemas/PublicId" }
+                sportIds:
+                  type: array
+                  minItems: 1
+                  items: { $ref: "#/components/schemas/PublicId" }
+                facilityIds:
+                  type: array
+                  items: { $ref: "#/components/schemas/PublicId" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Venue sports and facilities replaced. }
+  /business/venues/{venueId}/courts:
+    post:
+      tags: [Business]
+      operationId: createBusinessCourt
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateCourtInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Court created with default booking settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { $ref: "#/components/schemas/PublicId" }
+  /business/venues/{venueId}/courts/{courtId}/availability:
+    put:
+      tags: [Business]
+      operationId: updateCourtAvailability
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+        - name: courtId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourtAvailabilityInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Schedule and booking constraints replaced. }
+  /business/venues/{venueId}/exceptions:
+    post:
+      tags: [Business]
+      operationId: createScheduleException
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduleExceptionInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Exception created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { $ref: "#/components/schemas/PublicId" }
+  /business/venues/{venueId}/payment-settings:
+    put:
+      tags: [Business]
+      operationId: updateVenuePaymentSettings
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VenuePaymentSettingsInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Payment settings saved. }
+  /business/venues/{venueId}/media:
+    post:
+      tags: [Business]
+      operationId: completeVenueMedia
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompleteVenueMediaInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Uploaded asset linked to venue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { $ref: "#/components/schemas/PublicId" }
+  /business/venues/{venueId}/addons:
+    post:
+      tags: [Business]
+      operationId: createVenueAddon
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, name, price]
+              properties:
+                tenantId: { $ref: "#/components/schemas/PublicId" }
+                name: { type: string, minLength: 2, maxLength: 60 }
+                price: { type: integer, minimum: 0 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201": { description: Add-on created. }
+  /business/venues/{venueId}/submit:
+    post:
+      tags: [Business]
+      operationId: submitBusinessVenue
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId]
+              properties:
+                tenantId: { $ref: "#/components/schemas/PublicId" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Versioned verification request created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requestId]
+                properties:
+                  requestId: { $ref: "#/components/schemas/PublicId" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /business/dashboard:
+    get:
+      tags: [Business]
+      operationId: getBusinessDashboard
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/VenueIdQuery"
+      responses:
+        "200":
+          description: Operational summary scoped by membership and assignment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BusinessDashboard" }
+  /business/bookings:
+    get:
+      tags: [Business]
+      operationId: listBusinessBookings
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/VenueIdQuery"
+        - name: startsAfter
+          in: query
+          schema: { type: string, format: date-time }
+        - name: startsBefore
+          in: query
+          schema: { type: string, format: date-time }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: outstandingOnly
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Booking list scoped by tenant membership.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/BusinessBooking" }
+  /business/bookings/offline:
+    post:
+      tags: [Business]
+      operationId: createOfflineBooking
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOfflineBookingInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Offline booking reserved by the shared booking transaction.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /business/bookings/{bookingId}/transition:
+    post:
+      tags: [Business]
+      operationId: transitionBusinessBooking
+      parameters:
+        - $ref: "#/components/parameters/BookingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookingTransitionInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Valid booking transition recorded. }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /business/bookings/{bookingId}/attendance:
+    post:
+      tags: [Business]
+      operationId: recordBusinessAttendance
+      parameters:
+        - $ref: "#/components/parameters/BookingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AttendanceInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Check-in or no-show recorded. }
+  /business/bookings/{bookingId}/settle:
+    post:
+      tags: [Business]
+      operationId: settleBusinessOutstanding
+      parameters:
+        - $ref: "#/components/parameters/BookingId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookingScope" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Sandbox venue settlement recorded as a payment attempt.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attemptId, amount]
+                properties:
+                  attemptId: { $ref: "#/components/schemas/PaymentReference" }
+                  amount: { type: integer }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /business/bookings/{bookingId}/cancel-for-closure:
+    post:
+      tags: [Business]
+      operationId: cancelBookingForClosure
+      parameters:
+        - $ref: "#/components/parameters/BookingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClosureCancellationInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Booking cancelled with compatible refund record. }
+  /business/bookings/{bookingId}/reschedule:
+    post:
+      tags: [Business]
+      operationId: rescheduleBusinessBooking
+      parameters:
+        - $ref: "#/components/parameters/BookingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RescheduleInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: New slots locked before old reservation release. }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /business/closures:
+    post:
+      tags: [Business]
+      operationId: createBusinessClosure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateClosureInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "201":
+          description: Closure and impacted booking references.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [blockId, impactedBookingIds]
+                properties:
+                  blockId: { $ref: "#/components/schemas/PublicId" }
+                  impactedBookingIds:
+                    type: array
+                    items: { $ref: "#/components/schemas/BookingReference" }
+  /business/calendar:
+    get:
+      tags: [Business]
+      operationId: getBusinessCalendar
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/VenueIdQuery"
+        - name: startsAfter
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+        - name: startsBefore
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Booking and block calendar read model.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BusinessCalendar" }
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      operationId: getAdminDashboard
+      responses:
+        "200":
+          description: Platform sandbox metrics and integration status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminDashboard" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/tenants:
+    get:
+      tags: [Admin]
+      operationId: listAdminTenants
+      responses:
+        "200":
+          description: Tenant review list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminTenant" }
+  /admin/tenants/{tenantId}/status:
+    patch:
+      tags: [Admin]
+      operationId: updateAdminTenantStatus
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminStatusChangeInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Tenant lifecycle status updated and audited. }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/venues:
+    get:
+      tags: [Admin]
+      operationId: listAdminVenues
+      responses:
+        "200":
+          description: Cross-tenant venue list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminVenue" }
+  /admin/venues/{venueId}/status:
+    patch:
+      tags: [Admin]
+      operationId: updateAdminVenueStatus
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminStatusChangeInput" }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Venue lifecycle status updated and audited. }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/verifications:
+    get:
+      tags: [Admin]
+      operationId: listAdminVerifications
+      responses:
+        "200":
+          description: Verification queue and immutable snapshots.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminVerification" }
+  /admin/verifications/{requestId}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideAdminVerification
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision:
+                  type: string
+                  enum: [APPROVED, REJECTED, REVISION_REQUIRED]
+                reason: { type: string, minLength: 5, maxLength: 2000 }
+      responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "204": { description: Decision recorded. }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /events:
+    get:
+      tags: [Bookings]
+      operationId: subscribeEvents
+      responses:
+        "200":
+          description: Authenticated server-sent event stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+components:
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 160 }
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/PublicId" }
+    BookingId:
+      name: bookingId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/BookingReference" }
+    TenantIdQuery:
+      name: tenantId
+      in: query
+      required: true
+      schema: { $ref: "#/components/schemas/PublicId" }
+    VenueId:
+      name: venueId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/PublicId" }
+    VenueIdQuery:
+      name: venueId
+      in: query
+      schema: { $ref: "#/components/schemas/PublicId" }
+  responses:
+    Unauthorized:
+      description: Authentication is required.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Forbidden:
+      description: The active identity cannot access this workspace resource.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Conflict:
+      description: State or reservation conflict.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    PayloadTooLarge:
+      description: JSON request body exceeds the global 1 MB limit.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    InternalError:
+      description: Internal service error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+  schemas:
+    PublicId:
+      type: string
+      pattern: "^[A-Za-z0-9_-]{22}$"
+      description: Deterministically encrypted reference; internal numeric key is never exposed.
+    BookingReference:
+      type: string
+      pattern: "^LG-[A-Za-z0-9_-]{16}$"
+      description: Opaque random reference used in customer-facing booking URLs.
+    PaymentReference:
+      type: string
+      pattern: "^PAY-[A-Za-z0-9_-]{16}$"
+      description: Opaque random reference used in customer-facing payment URLs.
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status: { type: string }
+        service: { type: string }
+    ApiError:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: {}
+        requestId: { type: string }
+    RegisterInput:
+      type: object
+      required: [name, email, phone, password]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 50 }
+        email: { type: string, format: email }
+        phone: { type: string, minLength: 8, maxLength: 16 }
+        password: { type: string, minLength: 10, maxLength: 128 }
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    SessionResponse:
+      type: object
+      required: [user, memberships, platformAdmin]
+      properties:
+        user:
+          type: object
+          required: [id, name, email]
+          properties:
+            id: { $ref: "#/components/schemas/PublicId" }
+            name: { type: string }
+            email: { type: string }
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [tenantId, role]
+            properties:
+              tenantId: { $ref: "#/components/schemas/PublicId" }
+              role: { type: string, enum: [PRIMARY_OWNER, OWNER, STAFF] }
+        platformAdmin:
+          type: boolean
+    AccountNotification:
+      type: object
+      required: [id, kind, title, body, actionPath, read, createdAt]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        kind: { type: string, enum: [booking, payment, verification, system] }
+        title: { type: string }
+        body: { type: string }
+        actionPath: { type: string }
+        read: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    Workspace:
+      type: object
+      required: [tenantId, name, slug, status, role, membershipId, assignedVenueIds]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string }
+        role: { type: string, enum: [PRIMARY_OWNER, OWNER, STAFF] }
+        membershipId: { $ref: "#/components/schemas/PublicId" }
+        assignedVenueIds:
+          type: array
+          items: { $ref: "#/components/schemas/PublicId" }
+    WorkspaceMember:
+      type: object
+      required: [membershipId, userId, name, email, role, status, assignedVenueIds]
+      properties:
+        membershipId: { $ref: "#/components/schemas/PublicId" }
+        userId: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [PRIMARY_OWNER, OWNER, STAFF] }
+        status: { type: string }
+        assignedVenueIds:
+          type: array
+          items: { $ref: "#/components/schemas/PublicId" }
+    SetupProgress:
+      type: object
+      required: [percentage, complete, sections]
+      properties:
+        percentage: { type: integer, minimum: 0, maximum: 100 }
+        complete: { type: boolean }
+        sections:
+          type: object
+          additionalProperties: { type: boolean }
+    VenueSetupSummary:
+      type: object
+      required:
+        [id, tenantId, name, slug, addressLine, status, publicationStatus, progress]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        slug: { type: string }
+        addressLine: { type: string }
+        status: { type: string }
+        publicationStatus: { type: string }
+        progress: { $ref: "#/components/schemas/SetupProgress" }
+        revisionReason: { type: [string, "null"] }
+    VenueSetupDetail:
+      allOf:
+        - $ref: "#/components/schemas/VenueSetupSummary"
+        - type: object
+          required:
+            [
+              description,
+              phoneE164,
+              provinceCode,
+              cityCode,
+              districtCode,
+              postalCode,
+              timezone,
+              indoorOutdoorType,
+              houseRules,
+              emergencyContact,
+              sportIds,
+              facilityIds,
+              mediaCount,
+              courts,
+              exceptions,
+              blocks,
+              priceRules,
+              addons,
+            ]
+          properties:
+            description: { type: string }
+            phoneE164: { type: string }
+            email: { type: [string, "null"] }
+            provinceCode: { type: [string, "null"] }
+            cityCode: { type: [string, "null"] }
+            districtCode: { type: [string, "null"] }
+            postalCode: { type: [string, "null"] }
+            latitude: { type: [string, "null"] }
+            longitude: { type: [string, "null"] }
+            timezone: { type: string }
+            indoorOutdoorType: { type: string }
+            parkingInfo: { type: [string, "null"] }
+            houseRules: { type: string }
+            emergencyContact: { type: [string, "null"] }
+            sportIds:
+              type: array
+              items: { $ref: "#/components/schemas/PublicId" }
+            facilityIds:
+              type: array
+              items: { $ref: "#/components/schemas/PublicId" }
+            mediaCount: { type: integer }
+            courts:
+              type: array
+              items: { $ref: "#/components/schemas/BusinessCourt" }
+            exceptions:
+              type: array
+              items: { type: object, additionalProperties: true }
+            blocks:
+              type: array
+              items: { type: object, additionalProperties: true }
+            priceRules:
+              type: array
+              items: { type: object, additionalProperties: true }
+            paymentSettings:
+              oneOf:
+                - $ref: "#/components/schemas/VenuePaymentSettings"
+                - type: "null"
+            addons:
+              type: array
+              items: { type: object, additionalProperties: true }
+    BusinessCourt:
+      type: object
+      required: [id, name, sportId, status, weeklySchedule]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        sportId: { $ref: "#/components/schemas/PublicId" }
+        surface: { type: [string, "null"] }
+        capacity: { type: [integer, "null"] }
+        status: { type: string }
+        settings: { type: [object, "null"], additionalProperties: true }
+        weeklySchedule:
+          type: array
+          items: { type: object, additionalProperties: true }
+    SetupMasters:
+      type: object
+      required: [sports, facilities, intervals, buffers]
+      properties:
+        sports:
+          type: array
+          items: { $ref: "#/components/schemas/MasterOption" }
+        facilities:
+          type: array
+          items: { $ref: "#/components/schemas/MasterOption" }
+        intervals:
+          type: array
+          items: { type: integer }
+        buffers:
+          type: array
+          items: { type: integer }
+    MasterOption:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+    VenueProfileInput:
+      type: object
+      required:
+        [
+          tenantId,
+          name,
+          description,
+          phoneE164,
+          addressLine,
+          latitude,
+          longitude,
+          timezone,
+          indoorOutdoorType,
+          houseRules,
+        ]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string, minLength: 3, maxLength: 80 }
+        description: { type: string, minLength: 20, maxLength: 5000 }
+        phoneE164: { type: string }
+        email: { type: string, format: email }
+        addressLine: { type: string, minLength: 10, maxLength: 255 }
+        provinceCode: { type: string, maxLength: 10 }
+        cityCode: { type: string, maxLength: 10 }
+        districtCode: { type: string, maxLength: 10 }
+        postalCode: { type: string, pattern: "^\\d{5}$" }
+        latitude: { type: string }
+        longitude: { type: string }
+        timezone: { type: string }
+        indoorOutdoorType: { type: string, enum: [INDOOR, OUTDOOR, MIXED] }
+        parkingInfo: { type: string, maxLength: 255 }
+        houseRules: { type: string, minLength: 10, maxLength: 10000 }
+        emergencyContact: { type: string, maxLength: 50 }
+    CreateCourtInput:
+      type: object
+      required: [tenantId, sportId, name]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        sportId: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string, minLength: 2, maxLength: 50 }
+        surface: { type: string, maxLength: 50 }
+        capacity: { type: integer, minimum: 1, maximum: 500 }
+    CourtAvailabilityInput:
+      type: object
+      required:
+        [
+          tenantId,
+          intervalMinutes,
+          bufferMinutes,
+          minimumDurationMinutes,
+          maximumDurationMinutes,
+          bookingWindowDays,
+          minimumLeadMinutes,
+          weeklySchedule,
+        ]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        intervalMinutes: { type: integer }
+        bufferMinutes: { type: integer }
+        minimumDurationMinutes: { type: integer }
+        maximumDurationMinutes: { type: integer }
+        bookingWindowDays: { type: integer }
+        minimumLeadMinutes: { type: integer }
+        weeklySchedule:
+          type: array
+          items:
+            type: object
+            required: [dayOfWeek, opensAt, closesAt, active]
+            properties:
+              dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+              opensAt: { type: string }
+              closesAt: { type: string }
+              active: { type: boolean }
+    ScheduleExceptionInput:
+      type: object
+      required: [tenantId, localDate, kind]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        courtId: { $ref: "#/components/schemas/PublicId" }
+        localDate: { type: string, format: date }
+        kind: { type: string, enum: [OPEN, CLOSED, CUSTOM_HOURS] }
+        opensAt: { type: string }
+        closesAt: { type: string }
+        reason: { type: string, maxLength: 255 }
+    VenuePaymentSettings:
+      type: object
+      required:
+        [
+          allowFull,
+          allowDp,
+          dpPercentage,
+          allowPayAtVenue,
+          reservationAmount,
+          manualConfirmationMinutes,
+          balanceDeadlineMinutes,
+        ]
+      properties:
+        allowFull: { type: boolean }
+        allowDp: { type: boolean }
+        dpPercentage: { type: [integer, "null"] }
+        allowPayAtVenue: { type: boolean }
+        reservationAmount: { type: [integer, "null"] }
+        manualConfirmationMinutes: { type: integer }
+        balanceDeadlineMinutes: { type: [integer, "null"] }
+    VenuePaymentSettingsInput:
+      allOf:
+        - $ref: "#/components/schemas/VenuePaymentSettings"
+        - type: object
+          required: [tenantId]
+          properties:
+            tenantId: { $ref: "#/components/schemas/PublicId" }
+    CreateSignedUploadInput:
+      type: object
+      required: [tenantId, fileName, mimeType, byteSize]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        mimeType:
+          type: string
+          enum: [image/webp, image/jpeg, image/png]
+        byteSize: { type: integer, minimum: 1, maximum: 10485760 }
+    SignedUpload:
+      type: object
+      required: [storageKey, uploadUrl, expiresInSeconds]
+      properties:
+        storageKey: { type: string }
+        uploadUrl: { type: string, format: uri }
+        expiresInSeconds: { type: integer }
+    CompleteVenueMediaInput:
+      type: object
+      required: [tenantId, storageKey, mimeType, byteSize, altText, purpose]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        storageKey: { type: string, maxLength: 255 }
+        mimeType: { type: string, enum: [image/webp, image/jpeg, image/png] }
+        byteSize: { type: integer, minimum: 1, maximum: 10485760 }
+        altText: { type: string, minLength: 3, maxLength: 150 }
+        purpose: { type: string, enum: [COVER, GALLERY] }
+    CreatePriceRuleInput:
+      type: object
+      required:
+        [
+          tenantId,
+          venueId,
+          courtId,
+          kind,
+          amount,
+          dayOfWeek,
+          specialDate,
+          startsAtLocal,
+          endsAtLocal,
+        ]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        venueId: { $ref: "#/components/schemas/PublicId" }
+        courtId: { type: [string, "null"] }
+        kind: { type: string, enum: [BASE, WEEKDAY_WEEKEND, DAY_TIME, SPECIAL_DATE] }
+        amount: { type: integer, minimum: 1 }
+        dayOfWeek: { type: [integer, "null"], minimum: 0, maximum: 6 }
+        specialDate: { type: [string, "null"], format: date }
+        startsAtLocal: { type: [string, "null"] }
+        endsAtLocal: { type: [string, "null"] }
+    CustomerBookingSummary:
+      allOf:
+        - $ref: "#/components/schemas/Booking"
+        - type: object
+          required: [venueName, courtName, startsAt, endsAt]
+          properties:
+            venueName: { type: string }
+            courtName: { type: string }
+            startsAt: { type: string, format: date-time }
+            endsAt: { type: string, format: date-time }
+    PricingPreviewInput:
+      type: object
+      required: [tenantId, venueId, courtId, samples]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        venueId: { $ref: "#/components/schemas/PublicId" }
+        courtId: { $ref: "#/components/schemas/PublicId" }
+        candidate: { $ref: "#/components/schemas/CreatePriceRuleInput" }
+        samples:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            required: [localDate, localTime]
+            properties:
+              localDate: { type: string, format: date }
+              localTime:
+                { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$" }
+    PricingPreviewResult:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              [localDate, localTime, amount, selectedRuleId, selectedKind, scope]
+            properties:
+              localDate: { type: string, format: date }
+              localTime: { type: string }
+              amount: { type: integer }
+              selectedRuleId:
+                type: string
+                description: Public rule ID, or `candidate` for an unsaved preview rule.
+              selectedKind:
+                { type: string, enum: [BASE, WEEKDAY_WEEKEND, DAY_TIME, SPECIAL_DATE] }
+              scope: { type: string, enum: [COURT, VENUE] }
+    CreateOfflineBookingInput:
+      allOf:
+        - $ref: "#/components/schemas/CreateBookingInput"
+        - type: object
+          required: [tenantId, customer]
+          properties:
+            tenantId: { $ref: "#/components/schemas/PublicId" }
+            customer:
+              type: object
+              required: [name, channel]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 50 }
+                phone: { type: string, maxLength: 16 }
+                channel: { type: string, minLength: 2, maxLength: 20 }
+                adjustedAmount: { type: integer, minimum: 0 }
+                adjustmentReason: { type: string, maxLength: 2000 }
+    BookingScope:
+      type: object
+      required: [tenantId, venueId]
+      properties:
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        venueId: { $ref: "#/components/schemas/PublicId" }
+    BookingTransitionInput:
+      allOf:
+        - $ref: "#/components/schemas/BookingScope"
+        - type: object
+          required: [status, reason]
+          properties:
+            status: { type: string }
+            reason: { type: string, minLength: 3, maxLength: 500 }
+    AttendanceInput:
+      allOf:
+        - $ref: "#/components/schemas/BookingScope"
+        - type: object
+          required: [attendance]
+          properties:
+            attendance: { type: string, enum: [CHECKED_IN, NO_SHOW] }
+            reason: { type: string, maxLength: 500 }
+    ClosureCancellationInput:
+      allOf:
+        - $ref: "#/components/schemas/BookingScope"
+        - type: object
+          required: [reason]
+          properties:
+            reason: { type: string, minLength: 5, maxLength: 500 }
+    RescheduleInput:
+      allOf:
+        - $ref: "#/components/schemas/BookingScope"
+        - type: object
+          required: [newSlotIds, reason]
+          properties:
+            newSlotIds:
+              type: array
+              minItems: 1
+              maxItems: 6
+              items: { $ref: "#/components/schemas/PublicId" }
+            reason: { type: string, minLength: 5, maxLength: 500 }
+    CreateClosureInput:
+      allOf:
+        - $ref: "#/components/schemas/BookingScope"
+        - type: object
+          required: [startsAt, endsAt, kind, reason]
+          properties:
+            courtId: { $ref: "#/components/schemas/PublicId" }
+            startsAt: { type: string, format: date-time }
+            endsAt: { type: string, format: date-time }
+            kind: { type: string, enum: [CLOSURE, MAINTENANCE, BLOCK] }
+            reason: { type: string, minLength: 5, maxLength: 500 }
+    AdminNamedMaster:
+      type: object
+      required: [id, slug, name, active]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        slug: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+    AdminDurationOption:
+      type: object
+      required: [id, minutes, active]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        minutes: { type: integer }
+        active: { type: boolean }
+    AdminPaymentOption:
+      type: object
+      required: [id, code, label, active]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        code: { type: string }
+        label: { type: string }
+        active: { type: boolean }
+    AdminMasters:
+      type: object
+      required: [sports, facilities, bookingIntervals, buffers, paymentOptions]
+      properties:
+        sports:
+          type: array
+          items: { $ref: "#/components/schemas/AdminNamedMaster" }
+        facilities:
+          type: array
+          items: { $ref: "#/components/schemas/AdminNamedMaster" }
+        bookingIntervals:
+          type: array
+          items: { $ref: "#/components/schemas/AdminDurationOption" }
+        buffers:
+          type: array
+          items: { $ref: "#/components/schemas/AdminDurationOption" }
+        paymentOptions:
+          type: array
+          items: { $ref: "#/components/schemas/AdminPaymentOption" }
+    BusinessBooking:
+      type: object
+      required:
+        [
+          id,
+          venueId,
+          venueName,
+          courtId,
+          courtName,
+          customerName,
+          source,
+          status,
+          paymentMode,
+          paymentStatus,
+          attendanceStatus,
+          totalAmount,
+          balanceDue,
+          startsAt,
+          endsAt,
+          version,
+        ]
+      properties:
+        id: { $ref: "#/components/schemas/BookingReference" }
+        venueId: { $ref: "#/components/schemas/PublicId" }
+        venueName: { type: string }
+        courtId: { $ref: "#/components/schemas/PublicId" }
+        courtName: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: [string, "null"] }
+        source: { type: string, enum: [ONLINE, OFFLINE] }
+        status: { type: string }
+        paymentMode: { type: string }
+        paymentStatus: { type: string }
+        attendanceStatus:
+          type: [string, "null"]
+          enum: [CHECKED_IN, NO_SHOW, null]
+        totalAmount: { type: integer }
+        balanceDue: { type: integer }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        version: { type: integer }
+    BusinessDashboard:
+      type: object
+      required:
+        [
+          bookingToday,
+          pendingConfirmation,
+          outstandingAmount,
+          activeVenues,
+          availableSlotsToday,
+          upcoming,
+          recentActivity,
+        ]
+      properties:
+        bookingToday: { type: integer }
+        pendingConfirmation: { type: integer }
+        outstandingAmount: { type: integer }
+        activeVenues: { type: integer }
+        availableSlotsToday: { type: integer }
+        upcoming:
+          type: array
+          items: { $ref: "#/components/schemas/BusinessBooking" }
+        recentActivity:
+          type: array
+          items:
+            type: object
+            required: [bookingId, status, occurredAt]
+            properties:
+              bookingId: { $ref: "#/components/schemas/BookingReference" }
+              status: { type: string }
+              reason: { type: [string, "null"] }
+              occurredAt: { type: string, format: date-time }
+    BusinessCalendar:
+      type: object
+      required: [bookings, blocks]
+      properties:
+        bookings:
+          type: array
+          items: { $ref: "#/components/schemas/BusinessBooking" }
+        blocks:
+          type: array
+          items:
+            type: object
+            required: [id, venueId, kind, startsAt, endsAt, reason]
+            properties:
+              id: { $ref: "#/components/schemas/PublicId" }
+              venueId: { $ref: "#/components/schemas/PublicId" }
+              courtId: { type: [string, "null"] }
+              kind: { type: string }
+              startsAt: { type: string, format: date-time }
+              endsAt: { type: string, format: date-time }
+              reason: { type: string }
+    AdminDashboard:
+      type: object
+      required:
+        [
+          users,
+          tenants,
+          activeVenues,
+          pendingVerifications,
+          bookings,
+          sandboxVolume,
+          pendingOutbox,
+        ]
+      properties:
+        users: { type: integer }
+        tenants: { type: integer }
+        activeVenues: { type: integer }
+        pendingVerifications: { type: integer }
+        bookings: { type: integer }
+        sandboxVolume: { type: integer }
+        pendingOutbox: { type: integer }
+    AdminAuditEntry:
+      type: object
+      required:
+        [
+          id,
+          action,
+          resourceType,
+          resourceId,
+          actor,
+          tenant,
+          venue,
+          reason,
+          beforeState,
+          afterState,
+          requestId,
+          createdAt,
+        ]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        action: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: [string, "null"] }
+        actor:
+          type: [object, "null"]
+          properties:
+            id: { $ref: "#/components/schemas/PublicId" }
+            name: { type: string }
+            email: { type: string, format: email }
+        tenant:
+          type: [object, "null"]
+          properties:
+            id: { $ref: "#/components/schemas/PublicId" }
+            name: { type: string }
+        venue:
+          type: [object, "null"]
+          properties:
+            id: { $ref: "#/components/schemas/PublicId" }
+            name: { type: string }
+        reason: { type: [string, "null"] }
+        beforeState: {}
+        afterState: {}
+        requestId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    AdminAuditPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminAuditEntry" }
+        nextCursor: { type: [string, "null"] }
+    AdminTenant:
+      type: object
+      required: [id, name, slug, status, venueCount]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string }
+        primaryOwner: { type: [string, "null"] }
+        primaryOwnerEmail: { type: [string, "null"] }
+        venueCount: { type: integer }
+    AdminVenue:
+      type: object
+      required:
+        [id, tenantId, tenantName, name, slug, addressLine, status, publicationStatus]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        tenantName: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        addressLine: { type: string }
+        status: { type: string }
+        publicationStatus: { type: string }
+    AdminVerification:
+      type: object
+      required:
+        [
+          requestId,
+          venueId,
+          venueName,
+          tenantId,
+          tenantName,
+          status,
+          venueVersion,
+          snapshot,
+          submittedAt,
+        ]
+      properties:
+        requestId: { $ref: "#/components/schemas/PublicId" }
+        venueId: { $ref: "#/components/schemas/PublicId" }
+        venueName: { type: string }
+        tenantId: { $ref: "#/components/schemas/PublicId" }
+        tenantName: { type: string }
+        status: { type: string }
+        venueVersion: { type: integer }
+        reason: { type: [string, "null"] }
+        snapshot: {}
+        submittedAt: { type: string, format: date-time }
+        decidedAt: { type: [string, "null"], format: date-time }
+    AdminStatusChangeInput:
+      type: object
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, SUSPENDED] }
+        reason: { type: string, minLength: 5, maxLength: 2000 }
+    Venue:
+      type: object
+      required:
+        [
+          id,
+          slug,
+          name,
+          location,
+          cityCode,
+          indoorOutdoorType,
+          sport,
+          sports,
+          rating,
+          reviewCount,
+          priceFrom,
+          hasPromo,
+          nearestSlotStartsAt,
+          paymentModes,
+          distanceKm,
+        ]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        slug: { type: string }
+        name: { type: string }
+        location: { type: string }
+        cityCode: { type: [string, "null"] }
+        indoorOutdoorType: { type: string, enum: [INDOOR, OUTDOOR, MIXED] }
+        sport: { type: string }
+        sports:
+          type: array
+          items: { type: string }
+        rating: { type: number }
+        reviewCount: { type: integer }
+        priceFrom: { type: integer }
+        hasPromo: { type: boolean }
+        promoLabel: { type: [string, "null"] }
+        nearestSlotStartsAt: { type: [string, "null"], format: date-time }
+        paymentModes:
+          type: array
+          items: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
+        distanceKm: { type: [number, "null"] }
+        latitude: { type: [number, "null"] }
+        longitude: { type: [number, "null"] }
+        imageUrl: { type: [string, "null"] }
+        description: { type: string }
+        galleryUrls:
+          type: array
+          items: { type: string, format: uri }
+        parkingInfo: { type: [string, "null"] }
+        houseRules: { type: [string, "null"] }
+        timezone: { type: string }
+        facilities:
+          type: array
+          items: { $ref: "#/components/schemas/PublicId" }
+        courts:
+          type: array
+          items: { $ref: "#/components/schemas/CourtSummary" }
+        addons:
+          type: array
+          items: { $ref: "#/components/schemas/VenueAddon" }
+    VenueAddon:
+      type: object
+      required: [id, name, price]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        price: { type: integer, minimum: 0 }
+    CourtSummary:
+      type: object
+      required: [id, name, sport]
+      properties:
+        id: { $ref: "#/components/schemas/BookingReference" }
+        name: { type: string }
+        sport: { type: string }
+        surface: { type: [string, "null"] }
+    VenuePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Venue" }
+        nextCursor:
+          oneOf:
+            - $ref: "#/components/schemas/PublicId"
+            - type: "null"
+    AvailabilitySlot:
+      type: object
+      required: [id, startsAt, endsAt, price, status]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        price: { type: integer }
+        status: { type: string, enum: [AVAILABLE, HELD, BOOKED, BLOCKED] }
+    CreateBookingInput:
+      type: object
+      required: [venueId, courtId, slotIds, paymentMode]
+      properties:
+        venueId: { $ref: "#/components/schemas/PublicId" }
+        courtId: { $ref: "#/components/schemas/PublicId" }
+        slotIds:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/PublicId" }
+        addonIds:
+          type: array
+          maxItems: 10
+          items: { type: string }
+        paymentMode: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
+    Booking:
+      type: object
+      required:
+        [
+          id,
+          venueId,
+          paymentMode,
+          status,
+          paymentStatus,
+          totalAmount,
+          balanceDue,
+          holdExpiresAt,
+          version,
+        ]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        venueId: { $ref: "#/components/schemas/PublicId" }
+        paymentMode: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
+        status:
+          type: string
+          enum:
+            [
+              HOLD,
+              PENDING_CONFIRMATION,
+              CONFIRMED,
+              IN_PROGRESS,
+              COMPLETED,
+              CANCELLED,
+              EXPIRED,
+            ]
+        paymentStatus:
+          type: string
+          enum: [UNPAID, PARTIALLY_PAID, PAID, PARTIALLY_REFUNDED, REFUNDED]
+        totalAmount: { type: integer }
+        balanceDue: { type: integer }
+        holdExpiresAt: { type: [string, "null"], format: date-time }
+        version: { type: integer }
+    PaymentAttempt:
+      type: object
+      required: [id, bookingId, kind, amount, status, sandbox]
+      properties:
+        id: { $ref: "#/components/schemas/PaymentReference" }
+        bookingId: { $ref: "#/components/schemas/BookingReference" }
+        kind: { type: string }
+        amount: { type: integer }
+        status:
+          { type: string, enum: [CREATED, PENDING, PAID, FAILED, EXPIRED, CANCELLED] }
+        redirectUrl: { type: [string, "null"] }
+        sandbox: { type: boolean, const: true }

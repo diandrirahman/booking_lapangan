@@ -1,6 +1,21 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { ScenarioBoundary } from "./ui";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { LoadingState, ScenarioBoundary } from "./ui";
+
+afterEach(cleanup);
+
+describe("LoadingState", () => {
+  it.each([
+    ["page", "Memuat halaman…"],
+    ["panel", "Memuat data…"],
+    ["inline", "Memuat slot…"],
+  ] as const)("merender variant %s secara aksesibel", (variant, title) => {
+    render(<LoadingState variant={variant} title={title} />);
+
+    expect(screen.getByRole("status")).toHaveAttribute("data-loading-variant", variant);
+    expect(screen.getByRole("heading", { name: title })).toBeVisible();
+  });
+});
 
 describe("ScenarioBoundary", () => {
   it.each([

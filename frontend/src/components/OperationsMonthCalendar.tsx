@@ -26,10 +26,7 @@ export function OperationsMonthCalendar({
   });
 
   return (
-    <div
-      className="month-calendar"
-      aria-label="Kalender booking bulan Agustus 2026"
-    >
+    <div className="month-calendar" aria-label="Kalender booking bulan Agustus 2026">
       <div className="month-calendar-weekdays" aria-hidden="true">
         {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((day) => (
           <span key={day}>{day}</span>
@@ -44,9 +41,7 @@ export function OperationsMonthCalendar({
               key={day.toISOString()}
               className={isSameMonth(day, month) ? "" : "outside-month"}
             >
-              <time dateTime={format(day, "yyyy-MM-dd")}>
-                {format(day, "d")}
-              </time>
+              <time dateTime={format(day, "yyyy-MM-dd")}>{format(day, "d")}</time>
               <div>
                 {dayBookings.map((booking) => (
                   <button
@@ -64,8 +59,7 @@ export function OperationsMonthCalendar({
         })}
       </div>
       <p className="month-calendar-caption">
-        {format(month, "MMMM yyyy", { locale: id })} · klik booking untuk
-        melihat detail
+        {format(month, "MMMM yyyy", { locale: id })} · klik booking untuk melihat detail
       </p>
     </div>
   );

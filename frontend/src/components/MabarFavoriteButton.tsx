@@ -16,9 +16,7 @@ export function MabarFavoriteButton({
       type="button"
       className={`favorite-button mabar-favorite-button ${isFavorite ? "active" : ""}`}
       aria-label={
-        isFavorite
-          ? `Hapus ${title} dari favorit`
-          : `Simpan ${title} ke favorit`
+        isFavorite ? `Hapus ${title} dari favorit` : `Simpan ${title} ke favorit`
       }
       aria-pressed={isFavorite}
       onClick={() =>

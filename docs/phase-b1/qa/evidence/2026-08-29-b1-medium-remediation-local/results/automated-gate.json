@@ -1,0 +1,23 @@
+{
+  "runtime": "Node.js v22.23.2",
+  "command": "npm run qa:b1:local",
+  "status": "passed",
+  "unitAndComponent": {
+    "frontend": 39,
+    "backend": 45,
+    "apiClient": 1
+  },
+  "integration": 22,
+  "security": 17,
+  "phaseAE2E": {
+    "passed": 36,
+    "plannedSkip": 20
+  },
+  "phaseB1E2E": {
+    "passed": 35,
+    "plannedSkip": 9
+  },
+  "concurrencyRequests": 50,
+  "maximumActiveReservations": 1,
+  "runtimeVulnerabilities": 0
+}

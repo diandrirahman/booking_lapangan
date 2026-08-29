@@ -22,10 +22,7 @@ function resetTilt(event: PointerEvent<HTMLButtonElement>) {
 }
 
 // Adapted from the 3D Gallery and Gallery Grid with Lightbox collections on 21st.dev.
-export function InteractiveGallery({
-  images,
-  venueName,
-}: InteractiveGalleryProps) {
+export function InteractiveGallery({ images, venueName }: InteractiveGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
 
@@ -35,9 +32,7 @@ export function InteractiveGallery({
   }
 
   function move(direction: -1 | 1) {
-    setActiveIndex(
-      (current) => (current + direction + images.length) % images.length,
-    );
+    setActiveIndex((current) => (current + direction + images.length) % images.length);
   }
 
   return (
@@ -46,7 +41,7 @@ export function InteractiveGallery({
         {images.slice(0, 3).map((image, index) => (
           <button
             type="button"
-            key={image}
+            key={`${image}-${index}`}
             className={index === 0 ? "gallery-main" : ""}
             onClick={() => openImage(index)}
             onPointerMove={updateTilt}
@@ -60,11 +55,7 @@ export function InteractiveGallery({
             <span className="gallery-depth" aria-hidden="true" />
           </button>
         ))}
-        <button
-          type="button"
-          className="gallery-count"
-          onClick={() => openImage(0)}
-        >
+        <button type="button" className="gallery-count" onClick={() => openImage(0)}>
           <Images /> 12 foto
         </button>
       </div>
@@ -95,10 +86,7 @@ export function InteractiveGallery({
           >
             <ChevronRight />
           </button>
-          <Dialog.Close
-            className="icon-button gallery-close"
-            aria-label="Tutup galeri"
-          >
+          <Dialog.Close className="icon-button gallery-close" aria-label="Tutup galeri">
             <X />
           </Dialog.Close>
           <span className="gallery-position">

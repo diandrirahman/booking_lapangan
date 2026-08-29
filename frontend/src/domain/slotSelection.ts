@@ -43,8 +43,7 @@ export function canToggleSlot(
   const firstMinutes = toMinutes(selected[0].time);
   const lastMinutes = toMinutes(selected[selected.length - 1].time);
   return (
-    candidateMinutes === firstMinutes - 60 ||
-    candidateMinutes === lastMinutes + 60
+    candidateMinutes === firstMinutes - 60 || candidateMinutes === lastMinutes + 60
   );
 }
 

@@ -11,6 +11,7 @@ import {
   Goal,
   Heart,
   Layers3,
+  LocateFixed,
   type LucideIcon,
   MapPin,
   Maximize2,
@@ -24,20 +25,19 @@ import {
   Volleyball,
   Wind,
 } from "lucide-react";
-import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { format } from "date-fns";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { galleryImages, heroImage, sports } from "../data/fixtures";
 import { usePrototype } from "../store/PrototypeStore";
-import {
-  formatRupiah,
-  selectVenueBySlug,
-  selectVenueCourts,
-} from "../store/selectors";
+import { formatRupiah } from "../store/selectors";
 import {
   Badge,
   Button,
   Card,
+  ErrorState,
   Input,
+  LoadingState,
   PageTitle,
   ScenarioBoundary,
   Tabs,
@@ -49,6 +49,15 @@ import { DatePicker } from "../components/DatePicker";
 import { InteractiveGallery } from "../components/InteractiveGallery";
 import { MabarFavoriteButton } from "../components/MabarFavoriteButton";
 import { SelectField } from "../components/SelectField";
+import {
+  useInfiniteVenueSearch,
+  useVenueDetail,
+  useVenueSearch,
+  type VenueSearchInput,
+} from "../api/venueQueries";
+import { serverStateEnabled } from "../api/apiClient";
+import { VenueMap } from "../components/VenueMap";
+import { VenueReviews } from "../components/VenueReviews";
 
 const locationOptions = [
   { value: "jakarta-selatan", label: "Jakarta Selatan" },
@@ -76,9 +85,12 @@ function VenueCard({
 }) {
   const { state, dispatch } = usePrototype();
   const isFavorite = state.favoriteVenueIds.includes(venue.id);
+  const isSelected = state.selectedVenueId === venue.id;
   return (
     <Card
-      className={`venue-card ${compact ? "compact" : ""}`}
+      id={`venue-card-${venue.id}`}
+      className={`venue-card ${compact ? "compact" : ""} ${isSelected ? "selected" : ""}`}
+      aria-current={isSelected ? "true" : undefined}
       onMouseEnter={() => dispatch({ type: "SELECT_VENUE", venueId: venue.id })}
     >
       <Link to={`/venues/${venue.slug}`}>
@@ -140,10 +152,11 @@ function VenueCard({
 
 export function LandingPage() {
   const { state } = usePrototype();
+  const venueQuery = useVenueSearch();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("jakarta-selatan");
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 7, 27));
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
   return (
     <>
       <section className="hero-section hero-animated">
@@ -157,8 +170,8 @@ export function LandingPage() {
           <p className="hero-kicker">Booking lapangan olahraga</p>
           <h1>Main di mana hari ini?</h1>
           <p>
-            Cek harga dan jadwal venue di sekitarmu, lalu pilih waktu bermain
-            tanpa perlu chat admin.
+            Cek harga dan jadwal venue di sekitarmu, lalu pilih waktu bermain tanpa
+            perlu chat admin.
           </p>
           <form
             className="hero-search"
@@ -247,12 +260,9 @@ export function LandingPage() {
             emptyTitle="Belum ada rekomendasi"
           >
             <div className="venue-grid">
-              {state.venues
-                .filter((venue) => venue.status === "published")
-                .slice(0, 3)
-                .map((venue) => (
-                  <VenueCard key={venue.id} venue={venue} />
-                ))}
+              {(venueQuery.data?.items ?? []).slice(0, 3).map((venue) => (
+                <VenueCard key={venue.id} venue={venue} />
+              ))}
             </div>
           </ScenarioBoundary>
         </section>
@@ -294,11 +304,7 @@ function MabarPreview() {
         {state.mabars.slice(0, 2).map((mabar) => (
           <article key={mabar.id} className="mabar-card">
             <Link className="mabar-card-link" to={`/mabar/${mabar.id}`}>
-              <img
-                src={mabar.image}
-                alt={`Komunitas ${mabar.sport}`}
-                loading="lazy"
-              />
+              <img src={mabar.image} alt={`Komunitas ${mabar.sport}`} loading="lazy" />
               <div>
                 <Badge tone="info">{mabar.level}</Badge>
                 <h3>{mabar.title}</h3>
@@ -322,17 +328,84 @@ function MabarPreview() {
 
 export function VenueSearchPage() {
   const { state, dispatch } = usePrototype();
+  const [searchParameters, setSearchParameters] = useSearchParams();
+  const [query, setQuery] = useState(searchParameters.get("q") ?? "");
   const [sport, setSport] = useState("Semua");
-  const [sort, setSort] = useState("Terdekat");
-  const filtered = state.venues
-    .filter(
-      (venue) =>
-        venue.status === "published" &&
-        (sport === "Semua" || venue.sport === sport),
-    )
-    .sort((a, b) =>
-      sort === "Rating" ? b.rating - a.rating : a.priceFrom - b.priceFrom,
+  const [area, setArea] = useState("");
+  const [searchDate, setSearchDate] = useState("");
+  const [searchTime, setSearchTime] = useState("");
+  const [indoorOutdoorType, setIndoorOutdoorType] = useState("ALL");
+  const [paymentMode, setPaymentMode] = useState("ALL");
+  const [minimumRating, setMinimumRating] = useState("ALL");
+  const [maximumPrice, setMaximumPrice] = useState("");
+  const [hasPromo, setHasPromo] = useState(false);
+  const [facilitySlugs, setFacilitySlugs] = useState<string[]>([]);
+  const [coordinates, setCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationError, setLocationError] = useState("");
+  const [sort, setSort] = useState<NonNullable<VenueSearchInput["sort"]>>("RELEVANT");
+  const venueQuery = useInfiniteVenueSearch({
+    query: searchParameters.get("q") || undefined,
+    area: area || undefined,
+    date: searchDate || undefined,
+    time: searchDate && searchTime ? searchTime : undefined,
+    sport: sport === "Semua" ? undefined : toSlug(sport),
+    facilities: facilitySlugs.length > 0 ? facilitySlugs.join(",") : undefined,
+    indoorOutdoorType:
+      indoorOutdoorType === "ALL"
+        ? undefined
+        : (indoorOutdoorType as "INDOOR" | "OUTDOOR" | "MIXED"),
+    paymentMode:
+      paymentMode === "ALL"
+        ? undefined
+        : (paymentMode as "FULL" | "DP" | "PAY_AT_VENUE"),
+    minimumRating: minimumRating === "ALL" ? undefined : Number(minimumRating),
+    maximumPrice: maximumPrice ? Number(maximumPrice) : undefined,
+    hasPromo: hasPromo || undefined,
+    latitude: coordinates?.latitude,
+    longitude: coordinates?.longitude,
+    sort,
+  });
+  const filtered = venueQuery.data?.items ?? [];
+
+  function requestCurrentLocation() {
+    setLocationError("");
+    if (!navigator.geolocation) {
+      setLocationError(
+        "Browser ini tidak mendukung lokasi. Pencarian manual tetap tersedia.",
+      );
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setCoordinates({ latitude: coords.latitude, longitude: coords.longitude });
+        setSort("NEAREST");
+      },
+      () =>
+        setLocationError(
+          "Izin lokasi tidak diberikan. Kamu tetap dapat mencari berdasarkan area.",
+        ),
+      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 300_000 },
     );
+  }
+
+  function toggleFacility(slug: string) {
+    setFacilitySlugs((current) =>
+      current.includes(slug)
+        ? current.filter((item) => item !== slug)
+        : [...current, slug],
+    );
+  }
+  function selectVenueFromMap(venueId: string) {
+    dispatch({ type: "SELECT_VENUE", venueId });
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(`venue-card-${venueId}`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  }
   return (
     <div className="content-container search-page">
       <PageTitle
@@ -346,6 +419,15 @@ export function VenueSearchPage() {
           <Input
             aria-label="Cari venue"
             placeholder="Cari nama venue atau area"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              const nextParameters = new URLSearchParams(searchParameters);
+              if (query.trim()) nextParameters.set("q", query.trim());
+              else nextParameters.delete("q");
+              setSearchParameters(nextParameters);
+            }}
           />
         </div>
         <SelectField
@@ -360,35 +442,183 @@ export function VenueSearchPage() {
         <SelectField
           ariaLabel="Urutkan"
           options={[
-            { value: "Terdekat", label: "Terdekat" },
-            { value: "Rating", label: "Rating tertinggi" },
+            { value: "RELEVANT", label: "Paling relevan" },
+            { value: "NEAREST", label: "Terdekat" },
+            { value: "PRICE_LOWEST", label: "Harga terendah" },
+            { value: "RATING_HIGHEST", label: "Rating tertinggi" },
+            { value: "POPULAR", label: "Paling populer" },
+            { value: "NEWEST", label: "Venue terbaru" },
           ]}
           value={sort}
-          onValueChange={setSort}
+          onValueChange={(value) =>
+            setSort(value as NonNullable<VenueSearchInput["sort"]>)
+          }
         />
+        <Button variant="secondary" type="button" onClick={requestCurrentLocation}>
+          <LocateFixed aria-hidden="true" />
+          Dekat saya
+        </Button>
       </div>
-      <ScenarioBoundary
-        scenario={state.scenario}
-        emptyTitle="Venue tidak ditemukan"
-      >
-        <div className="search-layout">
-          <div>
-            <p className="result-count">
-              <strong>{filtered.length} venue</strong> ditemukan · data
-              diperbarui barusan
-            </p>
-            <div className="venue-list">
-              {filtered.map((venue) => (
-                <VenueCard key={venue.id} venue={venue} compact />
-              ))}
-            </div>
-          </div>
-          <MockMap
-            venues={filtered}
-            selectedId={state.selectedVenueId}
-            onSelect={(id) => dispatch({ type: "SELECT_VENUE", venueId: id })}
-          />
+      <details className="search-filter-panel">
+        <summary>Filter lainnya</summary>
+        <div className="search-filter-grid">
+          <label>
+            Area
+            <Input
+              value={area}
+              onChange={(event) => setArea(event.target.value)}
+              placeholder="Contoh: Kemang"
+            />
+          </label>
+          <label>
+            Harga maksimum
+            <Input
+              inputMode="numeric"
+              min="0"
+              type="number"
+              value={maximumPrice}
+              onChange={(event) => setMaximumPrice(event.target.value)}
+              placeholder="Contoh: 250000"
+            />
+          </label>
+          <label>
+            Tanggal main
+            <Input
+              type="date"
+              value={searchDate}
+              onChange={(event) => setSearchDate(event.target.value)}
+            />
+          </label>
+          <label>
+            Jam mulai
+            <Input
+              type="time"
+              value={searchTime}
+              disabled={!searchDate}
+              onChange={(event) => setSearchTime(event.target.value)}
+            />
+          </label>
+          <label>
+            Jenis venue
+            <SelectField
+              ariaLabel="Filter jenis venue"
+              options={[
+                { value: "ALL", label: "Semua jenis" },
+                { value: "INDOOR", label: "Indoor" },
+                { value: "OUTDOOR", label: "Outdoor" },
+                { value: "MIXED", label: "Indoor & outdoor" },
+              ]}
+              value={indoorOutdoorType}
+              onValueChange={setIndoorOutdoorType}
+            />
+          </label>
+          <label>
+            Metode pembayaran
+            <SelectField
+              ariaLabel="Filter metode pembayaran"
+              options={[
+                { value: "ALL", label: "Semua metode" },
+                { value: "FULL", label: "Bayar penuh" },
+                { value: "DP", label: "DP" },
+                { value: "PAY_AT_VENUE", label: "Bayar di venue" },
+              ]}
+              value={paymentMode}
+              onValueChange={setPaymentMode}
+            />
+          </label>
+          <label>
+            Rating minimum
+            <SelectField
+              ariaLabel="Filter rating minimum"
+              options={[
+                { value: "ALL", label: "Semua rating" },
+                { value: "4", label: "4,0 ke atas" },
+                { value: "4.5", label: "4,5 ke atas" },
+              ]}
+              value={minimumRating}
+              onValueChange={setMinimumRating}
+            />
+          </label>
+          <label className="search-check-option">
+            <input
+              checked={hasPromo}
+              onChange={(event) => setHasPromo(event.target.checked)}
+              type="checkbox"
+            />
+            Promo tersedia
+          </label>
         </div>
+        <fieldset className="filter-chip-group">
+          <legend>Fasilitas</legend>
+          {[
+            ["area-parkir", "Area parkir"],
+            ["ruang-ganti", "Ruang ganti"],
+            ["kamar-mandi", "Kamar mandi"],
+            ["mushola", "Mushola"],
+          ].map(([slug, label]) => (
+            <button
+              aria-pressed={facilitySlugs.includes(slug)}
+              className={facilitySlugs.includes(slug) ? "active" : undefined}
+              key={slug}
+              onClick={() => toggleFacility(slug)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </fieldset>
+      </details>
+      {locationError && <p className="field-error">{locationError}</p>}
+      <ScenarioBoundary scenario={state.scenario} emptyTitle="Venue tidak ditemukan">
+        {venueQuery.isError ? (
+          <div>
+            <ErrorState onRetry={() => void venueQuery.refetch()} />
+            <p className="field-error" data-testid="venue-query-error">
+              {venueQuery.error instanceof Error
+                ? venueQuery.error.message
+                : "Respons katalog tidak dapat diproses."}
+            </p>
+          </div>
+        ) : (
+          <div className="search-layout" aria-busy={venueQuery.isLoading}>
+            <div>
+              <p className="result-count">
+                <strong>{filtered.length} venue</strong> ditemukan · data diperbarui
+                barusan
+              </p>
+              <div className="venue-list">
+                {filtered.map((venue) => (
+                  <VenueCard key={venue.id} venue={venue} compact />
+                ))}
+              </div>
+              <InfiniteVenueLoader
+                canLoad={Boolean(venueQuery.hasNextPage)}
+                isLoading={venueQuery.isFetchingNextPage}
+                onLoad={() => void venueQuery.fetchNextPage()}
+              />
+            </div>
+            {serverStateEnabled ? (
+              <VenueMap
+                venues={filtered}
+                selectedVenueId={state.selectedVenueId}
+                onSelect={selectVenueFromMap}
+                fallback={
+                  <MockMap
+                    venues={filtered}
+                    selectedId={state.selectedVenueId}
+                    onSelect={selectVenueFromMap}
+                  />
+                }
+              />
+            ) : (
+              <MockMap
+                venues={filtered}
+                selectedId={state.selectedVenueId}
+                onSelect={selectVenueFromMap}
+              />
+            )}
+          </div>
+        )}
       </ScenarioBoundary>
     </div>
   );
@@ -425,7 +655,10 @@ function MockMap({
         <button
           key={venue.id}
           onClick={() => onSelect(venue.id)}
-          style={{ left: `${venue.lat}%`, top: `${venue.lng}%` }}
+          style={{
+            left: `${mockMapPosition(venue).left}%`,
+            top: `${mockMapPosition(venue).top}%`,
+          }}
           className={`map-marker ${selectedId === venue.id ? "selected" : ""}`}
           aria-label={`Pilih ${venue.name}`}
         >
@@ -437,11 +670,105 @@ function MockMap({
   );
 }
 
+const fixtureMapPositions: Readonly<Record<string, { left: number; top: number }>> = {
+  v1: { left: 28, top: 35 },
+  v2: { left: 62, top: 56 },
+  v3: { left: 46, top: 22 },
+  v4: { left: 74, top: 31 },
+  v5: { left: 30, top: 70 },
+  v6: { left: 80, top: 74 },
+};
+
+function mockMapPosition(venue: { id: string; lat: number; lng: number }) {
+  return (
+    fixtureMapPositions[venue.id] ?? {
+      left: longitudeToPercent(venue.lng),
+      top: latitudeToPercent(venue.lat),
+    }
+  );
+}
+
+function longitudeToPercent(longitude: number): number {
+  return clamp(((longitude - 106.62) / 0.24) * 100, 8, 92);
+}
+
+function latitudeToPercent(latitude: number): number {
+  return clamp(((-6.16 - latitude) / 0.17) * 100, 8, 92);
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+function InfiniteVenueLoader({
+  canLoad,
+  isLoading,
+  onLoad,
+}: {
+  canLoad: boolean;
+  isLoading: boolean;
+  onLoad: () => void;
+}) {
+  const trigger = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!canLoad || isLoading || !trigger.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) onLoad();
+      },
+      { rootMargin: "240px" },
+    );
+    observer.observe(trigger.current);
+    return () => observer.disconnect();
+  }, [canLoad, isLoading, onLoad]);
+
+  if (!canLoad) return null;
+  return (
+    <div ref={trigger}>
+      <Button
+        className="load-more-button"
+        disabled={isLoading}
+        onClick={onLoad}
+        variant="secondary"
+      >
+        {isLoading ? "Memuat venue…" : "Muat venue lainnya"}
+      </Button>
+    </div>
+  );
+}
+
 export function VenueDetailPage() {
   const { slug } = useParams();
-  const { state } = usePrototype();
-  const venue = selectVenueBySlug(state, slug);
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 7, 27));
+  const { state, dispatch } = usePrototype();
+  const venueQuery = useVenueDetail(slug);
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  if (venueQuery.isError) {
+    return (
+      <div className="content-container">
+        <ErrorState onRetry={() => void venueQuery.refetch()} />
+      </div>
+    );
+  }
+  if (!venueQuery.data) {
+    return (
+      <div className="content-container">
+        <LoadingState
+          title="Memuat detail venue…"
+          description="Menyiapkan informasi, lapangan, dan jadwal venue."
+        />
+      </div>
+    );
+  }
+  const {
+    venue,
+    courts: venueCourts,
+    description,
+    galleryUrls,
+    parkingInfo,
+    houseRules,
+  } = venueQuery.data;
+  const isFavorite = state.favoriteVenueIds.includes(venue.id);
+  const detailGallery = [...new Set([venue.image, ...galleryUrls, ...galleryImages])];
   return (
     <div className="content-container detail-page">
       <div className="back-row">
@@ -449,15 +776,21 @@ export function VenueDetailPage() {
           <ArrowLeft />
           Kembali ke hasil pencarian
         </Link>
-        <button>
-          <Heart />
-          Simpan
+        <button
+          aria-pressed={isFavorite}
+          onClick={() =>
+            dispatch({
+              type: "TOGGLE_FAVORITE",
+              resource: "venue",
+              resourceId: venue.id,
+            })
+          }
+        >
+          <Heart fill={isFavorite ? "currentColor" : "none"} />
+          {isFavorite ? "Tersimpan" : "Simpan"}
         </button>
       </div>
-      <InteractiveGallery
-        images={[venue.image, ...galleryImages]}
-        venueName={venue.name}
-      />
+      <InteractiveGallery images={detailGallery} venueName={venue.name} />
       <div className="detail-layout">
         <div>
           <div className="venue-detail-heading">
@@ -483,6 +816,13 @@ export function VenueDetailPage() {
             </TabsList>
             <TabsContent value="overview">
               <section className="detail-section">
+                <h2>Tentang venue</h2>
+                <p>
+                  {description ||
+                    `${venue.name} menyediakan area olahraga yang dapat dipesan secara online.`}
+                </p>
+              </section>
+              <section className="detail-section">
                 <h2>Fasilitas venue</h2>
                 <div className="facility-grid">
                   {venue.facilities.map((item) => (
@@ -495,11 +835,9 @@ export function VenueDetailPage() {
               </section>
               <section className="detail-section">
                 <h2>Kebijakan penting</h2>
-                <p>
-                  Reschedule maksimal 6 jam sebelum bermain. Pembatalan
-                  mengikuti tier refund venue. Semua transaksi pada prototype
-                  adalah simulasi.
-                </p>
+                <p>{houseRules || "Kebijakan venue belum ditambahkan."}</p>
+                {parkingInfo && <p>Parkir: {parkingInfo}</p>}
+                <small>Pembayaran pada Phase B1 menggunakan Midtrans Sandbox.</small>
               </section>
             </TabsContent>
             <TabsContent value="courts">
@@ -507,13 +845,8 @@ export function VenueDetailPage() {
                 <div className="court-tab-heading">
                   <div>
                     <p className="eyebrow">Pilih area bermain</p>
-                    <h2>
-                      {selectVenueCourts(state, venue.id).length} lapangan siap
-                      dipesan
-                    </h2>
-                    <p>
-                      Semua lapangan memakai jadwal dan harga yang transparan.
-                    </p>
+                    <h2>{venueCourts.length} lapangan siap dipesan</h2>
+                    <p>Semua lapangan memakai jadwal dan harga yang transparan.</p>
                   </div>
                   <Badge tone="success">
                     <CircleCheck />
@@ -521,7 +854,7 @@ export function VenueDetailPage() {
                   </Badge>
                 </div>
                 <div className="court-card-grid">
-                  {selectVenueCourts(state, venue.id).map((court, index) => (
+                  {venueCourts.map((court, index) => (
                     <Card className="court-detail-card" key={court.id}>
                       <div className="court-visual">
                         <img
@@ -567,7 +900,7 @@ export function VenueDetailPage() {
                             </strong>
                           </div>
                           <Link
-                            to={`/venues/${venue.slug}/book?court=${court.id}`}
+                            to={`/venues/${venue.slug}/book?court=${court.id}&date=${format(selectedDate, "yyyy-MM-dd")}`}
                           >
                             Pilih jadwal <ArrowRight />
                           </Link>
@@ -579,13 +912,11 @@ export function VenueDetailPage() {
               </section>
             </TabsContent>
             <TabsContent value="reviews">
-              <section className="detail-section">
-                <h2>Ulasan pemain</h2>
-                <p>
-                  “Court terawat, staf sigap, dan proses check-in cepat.” —
-                  Nadia
-                </p>
-              </section>
+              <VenueReviews
+                venueName={venue.name}
+                rating={venue.rating}
+                reviewCount={venue.reviewCount}
+              />
             </TabsContent>
           </Tabs>
         </div>
@@ -606,7 +937,7 @@ export function VenueDetailPage() {
           </label>
           <Link
             className="btn btn-primary btn-lg"
-            to={`/venues/${venue.slug}/book`}
+            to={`/venues/${venue.slug}/book?date=${format(selectedDate, "yyyy-MM-dd")}`}
           >
             Lihat slot tersedia
           </Link>
@@ -618,4 +949,8 @@ export function VenueDetailPage() {
       </div>
     </div>
   );
+}
+
+function toSlug(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
 }

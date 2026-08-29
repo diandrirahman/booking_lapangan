@@ -1,0 +1,54 @@
+{
+  "name": "lapangango",
+  "version": "0.2.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "packages/*"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @lapangango/backend\" \"npm run dev -w @lapangango/frontend\"",
+    "build": "npm run build --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:db:prepare": "npm run db:reset:e2e && npm run db:migrate:e2e && npm run db:seed:e2e",
+    "test:integration": "npm run test:db:prepare && cross-env NODE_ENV=test DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e REDIS_URL=redis://127.0.0.1:6380/1 npm run test:integration -w @lapangango/backend",
+    "test:security": "npm run test:db:prepare && cross-env NODE_ENV=test DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e REDIS_URL=redis://127.0.0.1:6380/1 npm run test:security -w @lapangango/backend",
+    "audit:production": "npm audit --omit=dev",
+    "test:concurrency": "npm run test:db:prepare && cross-env NODE_ENV=test DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e REDIS_URL=redis://127.0.0.1:6380/1 npm run test:concurrency -w @lapangango/backend",
+    "test:contract": "npm run test:contract -w @lapangango/api-client",
+    "test:e2e:phase-a": "npm run test:e2e -w @lapangango/frontend",
+    "db:migrate:e2e": "cross-env NODE_ENV=test DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e npm run db:migrate -w @lapangango/backend",
+    "db:seed:e2e": "cross-env NODE_ENV=test DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e SEED_DEMO_PASSWORD=LapanganGo-E2E-123 npm run db:seed -w @lapangango/backend",
+    "db:reset:e2e": "docker compose up -d --wait mysql-e2e redis && docker compose exec -T mysql-e2e mysql -uroot -proot_test -e \"DROP DATABASE IF EXISTS lapangango_e2e; CREATE DATABASE lapangango_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\"",
+    "test:e2e:b1": "docker compose up -d --wait minio && npm run db:reset:e2e && npm run db:migrate:e2e && npm run db:seed:e2e && npm run build -w @lapangango/backend && cross-env NODE_ENV=test PORT=3101 DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e REDIS_URL=redis://127.0.0.1:6380/1 SEED_DEMO_PASSWORD=LapanganGo-E2E-123 npm run test:e2e:b1 -w @lapangango/frontend",
+    "test:manual:b1": "docker compose up -d --wait minio && npm run db:reset:e2e && npm run db:migrate:e2e && npm run db:seed:e2e && npm run build -w @lapangango/backend && cross-env NODE_ENV=test DATABASE_URL=mysql://lapangango:lapangango_test@127.0.0.1:3308/lapangango_e2e REDIS_URL=redis://127.0.0.1:6380/1 SEED_DEMO_PASSWORD=LapanganGo-E2E-123 npm run test:manual:b1 -w @lapangango/frontend",
+    "test:ui-audit": "cross-env VITE_SERVER_STATE=off npm run build -w @lapangango/frontend && npm run test:ui-audit -w @lapangango/frontend",
+    "test:docs": "npm run test:docs -w @lapangango/backend",
+    "test:migrations": "npm run test:migrations -w @lapangango/backend",
+    "test:tidb": "npm run test:tidb -w @lapangango/backend",
+    "test:tidb:required": "cross-env REQUIRE_TIDB_GATE=true npm run test:tidb -w @lapangango/backend",
+    "db:generate": "npm run db:generate -w @lapangango/backend",
+    "db:migrate": "npm run db:migrate -w @lapangango/backend",
+    "db:seed": "npm run db:seed -w @lapangango/backend",
+    "api:generate": "npm run generate -w @lapangango/api-client",
+    "qa:b1:local": "npm run format:check && npm run lint && npm run type-check && npm run test && npm run test:integration && npm run test:security && npm run audit:production && npm run build && npm run test:e2e:phase-a && npm run test:e2e:b1 && npm run test:ui-audit && npm run test:manual:b1 && npm run test:concurrency && npm run test:contract && npm run test:migrations && npm run test:docs",
+    "qa:b1:staging": "npm run test:tidb:required && cross-env PLAYWRIGHT_EXTERNAL_SERVERS=true npm run test:manual:b1 -w @lapangango/frontend",
+    "qa:b1": "npm run qa:b1:local && npm run qa:b1:staging"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.68.0"
+  }
+}

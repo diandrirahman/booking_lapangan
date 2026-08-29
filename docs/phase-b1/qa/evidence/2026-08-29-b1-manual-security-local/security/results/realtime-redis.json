@@ -1,0 +1,16 @@
+{
+  "date": "2026-08-29",
+  "realtimeSamplesMs": [508, 460, 486],
+  "acceptanceMs": 2000,
+  "realtimePassed": true,
+  "redisOutage": {
+    "apiProcessCrashed": true,
+    "browserCatalogCountDuringOutage": 0,
+    "bookingsBefore": 57,
+    "bookingsAfter": 57,
+    "paymentAttemptsBefore": 29,
+    "paymentAttemptsAfter": 29,
+    "catalogCountAfterRecovery": 5,
+    "sessionRecovered": true
+  }
+}

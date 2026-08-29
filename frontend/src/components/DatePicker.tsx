@@ -32,11 +32,7 @@ export function DatePicker({
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content
-          className="date-picker-popover"
-          sideOffset={8}
-          align="start"
-        >
+        <Popover.Content className="date-picker-popover" sideOffset={8} align="start">
           <DayPicker
             mode="single"
             selected={value}

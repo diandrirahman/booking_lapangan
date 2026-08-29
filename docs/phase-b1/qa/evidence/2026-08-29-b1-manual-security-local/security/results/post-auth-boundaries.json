@@ -1,0 +1,30 @@
+{
+  "date": "2026-08-29",
+  "environment": "local-e2e",
+  "cookie": {
+    "loginStatus": 200,
+    "httpOnly": true,
+    "sameSiteLax": true,
+    "secure": false,
+    "secureNote": "Expected false on local HTTP; staging HTTPS must set Secure."
+  },
+  "signedUploadAsCustomer": [
+    { "case": "image-webp", "status": 201, "signedUrlIssued": true },
+    { "case": "pdf", "status": 201, "signedUrlIssued": true },
+    { "case": "executable-mime", "status": 422, "signedUrlIssued": false },
+    { "case": "extension-mime-spoof", "status": 201, "signedUrlIssued": true },
+    { "case": "zero-byte", "status": 422, "signedUrlIssued": false },
+    { "case": "over-10mb", "status": 422, "signedUrlIssued": false }
+  ],
+  "staffVenueIsolation": {
+    "listStatus": 200,
+    "visibleVenueNames": [
+      "QA B1 Local Venue 20260829",
+      "Arena Cendana",
+      "Soccer Hub Cilandak"
+    ],
+    "assignedVenue": "Arena Cendana",
+    "unassignedDetailStatus": 403
+  },
+  "secretsRedacted": true
+}

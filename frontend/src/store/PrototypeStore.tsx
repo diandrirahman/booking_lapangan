@@ -27,13 +27,9 @@ function updateBooking(
 function updateMabar(
   state: PrototypeState,
   mabarId: string,
-  update: (
-    mabar: PrototypeState["mabars"][number],
-  ) => PrototypeState["mabars"][number],
+  update: (mabar: PrototypeState["mabars"][number]) => PrototypeState["mabars"][number],
 ) {
-  return state.mabars.map((mabar) =>
-    mabar.id === mabarId ? update(mabar) : mabar,
-  );
+  return state.mabars.map((mabar) => (mabar.id === mabarId ? update(mabar) : mabar));
 }
 
 export function prototypeReducer(
@@ -200,16 +196,12 @@ export function prototypeReducer(
       return {
         ...state,
         venues: state.venues.map((venue) =>
-          venue.id === action.venueId
-            ? { ...venue, status: "in_review" }
-            : venue,
+          venue.id === action.venueId ? { ...venue, status: "in_review" } : venue,
         ),
         toast: "Venue dikirim ke antrian verifikasi.",
       };
     case "DECIDE_VENUE": {
-      const decidedVenue = state.venues.find(
-        (venue) => venue.id === action.venueId,
-      );
+      const decidedVenue = state.venues.find((venue) => venue.id === action.venueId);
       const status =
         action.decision === "approve"
           ? "published"
@@ -256,9 +248,7 @@ export function prototypeReducer(
           status: action.decision === "accept" ? "confirmed" : "cancelled",
         })),
         toast:
-          action.decision === "accept"
-            ? "Booking dikonfirmasi."
-            : "Booking ditolak.",
+          action.decision === "accept" ? "Booking dikonfirmasi." : "Booking ditolak.",
       };
     case "CHECK_IN_BOOKING":
       return {
@@ -317,9 +307,7 @@ export function prototypeReducer(
       return {
         ...state,
         mabars: state.mabars.map((mabar) =>
-          mabar.id === action.mabarId
-            ? { ...mabar, status: "published" }
-            : mabar,
+          mabar.id === action.mabarId ? { ...mabar, status: "published" } : mabar,
         ),
         toast: "Mabar dipublikasikan.",
       };
@@ -338,10 +326,7 @@ export function prototypeReducer(
           if (mabar.requireApproval)
             return {
               ...mabar,
-              pendingApprovalIds: [
-                ...mabar.pendingApprovalIds,
-                action.customerId,
-              ],
+              pendingApprovalIds: [...mabar.pendingApprovalIds, action.customerId],
             };
           return mabar.participantIds.length < mabar.capacity
             ? {
@@ -359,8 +344,7 @@ export function prototypeReducer(
       return {
         ...state,
         mabars: updateMabar(state, action.mabarId, (mabar) => {
-          if (!mabar.pendingApprovalIds.includes(action.customerId))
-            return mabar;
+          if (!mabar.pendingApprovalIds.includes(action.customerId)) return mabar;
           const pendingApprovalIds = mabar.pendingApprovalIds.filter(
             (id) => id !== action.customerId,
           );
@@ -382,9 +366,7 @@ export function prototypeReducer(
       return {
         ...state,
         mabars: updateMabar(state, action.mabarId, (mabar) => {
-          const wasParticipant = mabar.participantIds.includes(
-            action.customerId,
-          );
+          const wasParticipant = mabar.participantIds.includes(action.customerId);
           const [promotedId, ...remainingWaitlist] = mabar.waitlistIds;
           return {
             ...mabar,
@@ -431,8 +413,7 @@ export function prototypeReducer(
         toast: "Mabar dibatalkan dan seluruh kursi ditutup.",
       };
     case "TOGGLE_FAVORITE": {
-      const key =
-        action.resource === "venue" ? "favoriteVenueIds" : "favoriteMabarIds";
+      const key = action.resource === "venue" ? "favoriteVenueIds" : "favoriteMabarIds";
       const currentIds = state[key];
       const removing = currentIds.includes(action.resourceId);
       return {
@@ -481,10 +462,8 @@ function loadState() {
     return {
       ...structuredClone(initialState),
       ...parsedState,
-      favoriteVenueIds:
-        parsedState.favoriteVenueIds ?? initialState.favoriteVenueIds,
-      favoriteMabarIds:
-        parsedState.favoriteMabarIds ?? initialState.favoriteMabarIds,
+      favoriteVenueIds: parsedState.favoriteVenueIds ?? initialState.favoriteVenueIds,
+      favoriteMabarIds: parsedState.favoriteMabarIds ?? initialState.favoriteMabarIds,
       notifications: parsedState.notifications ?? initialState.notifications,
       venueDrafts: parsedState.venueDrafts ?? initialState.venueDrafts,
       mabars: (parsedState.mabars ?? initialState.mabars).map((mabar) => ({
@@ -506,23 +485,17 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
   }, [state]);
   useEffect(() => {
     if (!state.toast) return;
-    const timer = window.setTimeout(
-      () => dispatch({ type: "DISMISS_TOAST" }),
-      2800,
-    );
+    const timer = window.setTimeout(() => dispatch({ type: "DISMISS_TOAST" }), 2800);
     return () => window.clearTimeout(timer);
   }, [state.toast]);
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return (
-    <PrototypeContext.Provider value={value}>
-      {children}
-    </PrototypeContext.Provider>
+    <PrototypeContext.Provider value={value}>{children}</PrototypeContext.Provider>
   );
 }
 
 export function usePrototype() {
   const context = useContext(PrototypeContext);
-  if (!context)
-    throw new Error("usePrototype harus berada di dalam PrototypeProvider");
+  if (!context) throw new Error("usePrototype harus berada di dalam PrototypeProvider");
   return context;
 }
