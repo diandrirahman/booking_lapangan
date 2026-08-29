@@ -1,8 +1,24 @@
 # QA Report Phase B1 — Local Readiness
 
-Tanggal pemeriksaan terakhir: 29 Agustus 2026.
+Tanggal pemeriksaan terakhir: 30 Agustus 2026.
 
-Status: **LOCAL SIGN-OFF DITERIMA / GATE STAGING BELUM DIMULAI**
+Status: **LOCAL SIGN-OFF DITERIMA / GATE STAGING BERJALAN**
+
+## Compatibility staging 30 Agustus 2026
+
+- Frontend dan API Vercel berstatus sehat; API berjalan di region `sin1` dekat TiDB.
+- TiDB memiliki 4/4 migration dan seed realistis. Login serta endpoint terlindungi empat
+  role lulus.
+- Redis session/pub-sub lulus. Realtime Customer → Owner tercatat 231 ms, 236 ms, dan
+  210 ms terhadap batas 2.000 ms.
+- Signed upload Tigris WebP lulus. Bucket tetap private dan media publik diberikan melalui
+  redirect bertanda tangan setelah visibility database diperiksa.
+- Midtrans Sandbox membuat attempt `PENDING` dan redirect provider resmi; invalid
+  signature tanpa `Origin` ditolak `401`.
+- Google OIDC start membentuk client, state, dan callback staging. Consent end-to-end belum
+  dijalankan karena memerlukan persetujuan pengiriman profil Google pribadi.
+- Bukti compatibility ada di
+  [`2026-08-30-b1-staging-compatibility`](qa/evidence/2026-08-30-b1-staging-compatibility/README.md).
 
 ## Remediasi Medium 29 Agustus 2026
 

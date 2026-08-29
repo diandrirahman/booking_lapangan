@@ -1,6 +1,6 @@
 # Project Owner Sign-off — Phase B1
 
-Status: **LOCAL SIGN-OFF DITERIMA / GATE STAGING BELUM DIMULAI**
+Status: **LOCAL SIGN-OFF DITERIMA / GATE STAGING BERJALAN**
 
 Keputusan di bawah berasal dari Project Owner. AI/implementer hanya mencatat persetujuan
 eksplisit tersebut dan tidak mengambil keputusan atas nama Project Owner.
@@ -41,11 +41,16 @@ Persetujuan tercatat: pesan `Diterima` dari Project Owner melalui percakapan Cod
 
 ## Gate 2 — Staging (hanya setelah Gate 1 diterima)
 
-- [ ] Frontend/API Vercel sehat.
-- [ ] Compatibility TiDB dan signed upload Tigris lulus.
-- [ ] Google OIDC dan Midtrans Sandbox live lulus.
-- [ ] Realtime staging diuji minimal tiga kali dan setiap hasil memenuhi SLO.
+- [x] Frontend/API Vercel sehat.
+- [x] Compatibility TiDB dan signed upload Tigris lulus.
+- [ ] Google OIDC consent/callback end-to-end lulus.
+- [x] Midtrans Sandbox lulus.
+- [x] Realtime staging diuji minimal tiga kali dan setiap hasil memenuhi SLO.
 - [ ] Retest staging empat role × empat breakpoint selesai.
+
+Catatan implementer: Midtrans Sandbox telah lulus. Google OIDC start/callback configuration
+telah lulus, tetapi consent end-to-end belum dijalankan. Hasil teknis dan screenshot smoke
+ada di `evidence/2026-08-30-b1-staging-compatibility/`.
 
 ### Keputusan akhir staging
 

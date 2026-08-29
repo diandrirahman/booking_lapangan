@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-30",
+  "sourceCommit": "375005f",
+  "apiDeploymentId": "dpl_DmkUKBi8euDXzytr1dMV5K11s1uf",
+  "apiRegion": "sin1",
+  "health": {
+    "live": 200,
+    "ready": 200
+  },
+  "roleSmoke": {
+    "customer": { "login": 200, "me": 200, "protected": 200 },
+    "owner": { "login": 200, "me": 200, "protected": 200 },
+    "staff": { "login": 200, "me": 200, "protected": 200 },
+    "admin": { "login": 200, "me": 200, "protected": 200 }
+  },
+  "tigris": {
+    "signedUpload": 201,
+    "objectUpload": 200,
+    "completion": 201,
+    "download": 200,
+    "contentType": "image/webp",
+    "byteSize": 116878
+  },
+  "midtrans": {
+    "attempt": 201,
+    "attemptStatus": "PENDING",
+    "invalidSignature": 401
+  },
+  "googleOidcStart": 302,
+  "realtimeMs": [231, 236, 210]
+}

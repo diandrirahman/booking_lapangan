@@ -66,13 +66,17 @@ sebagai Vercel Secret dan `DATABASE_SSL_MODE=required`. Tigris menyediakan crede
 melalui integrasi Vercel; backend menormalkan nama variable Tigris ke konfigurasi
 S3-compatible yang sama.
 
-Backend sudah berhasil dibangun dan dideploy ke
-`https://lapangango-b1-staging-api.vercel.app`. Runtime masih berhenti sebelum health
-handler karena `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MIDTRANS_SERVER_KEY`, dan
-`MIDTRANS_CLIENT_KEY` belum tersedia. Seed staging juga belum dijalankan karena password
-demo harus disepakati Project Owner.
+Backend dan frontend sudah dideploy pada URL stabil di atas. Seluruh credential provider
+tersimpan sebagai Vercel Secret atau encrypted configuration. TiDB telah menjalankan 4/4
+migration dan seed demo; API live/readiness, login empat role, Redis, Tigris, serta
+Midtrans Sandbox sudah lulus compatibility smoke.
 
-## Dependency API yang belum terpetakan
+Function API wajib berada di `sin1`. Deployment default sempat berjalan di `iad1` dan
+menambah latency booking menjadi sekitar 5,5 detik. Deployment `sin1` menurunkannya
+menjadi 210–236 ms sekaligus memenuhi realtime SLO. Gunakan opsi region `sin1` ketika
+melakukan deployment manual dan verifikasi hasil melalui deployment inspection.
+
+## Dependency API staging
 
 Nilai berikut harus dibuat khusus staging dan disimpan sebagai encrypted environment
 variables pada Vercel. Jangan menaruh nilainya di repository.
@@ -92,8 +96,9 @@ variables pada Vercel. Jangan menaruh nilainya di repository.
 | `APP_ORIGIN`          | Sudah menunjuk URL frontend staging         |
 | `GOOGLE_REDIRECT_URI` | Sudah menunjuk callback same-origin staging |
 
-`MIDTRANS_*` dan `GOOGLE_*` wajib tersedia untuk Definition of Done plan terbaru karena
-acceptance mencakup Google OIDC dan Midtrans Sandbox. UI tetap berlabel Sandbox/Simulasi.
+`MIDTRANS_*` dan `GOOGLE_*` sudah tersedia. UI tetap berlabel Sandbox/Simulasi. Google
+consent end-to-end tetap memerlukan persetujuan action-time Project Owner karena mengirim
+profil Google pribadi ke aplikasi staging.
 
 ## Pemeriksaan setelah dependency tersedia
 
