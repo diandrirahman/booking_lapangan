@@ -15,8 +15,9 @@ Status: **LOCAL SIGN-OFF DITERIMA / GATE STAGING BERJALAN**
   redirect bertanda tangan setelah visibility database diperiksa.
 - Midtrans Sandbox membuat attempt `PENDING` dan redirect provider resmi; invalid
   signature tanpa `Origin` ditolak `401`.
-- Google OIDC start membentuk client, state, dan callback staging. Consent end-to-end belum
-  dijalankan karena memerlukan persetujuan pengiriman profil Google pribadi.
+- Google OIDC consent/callback end-to-end lulus. Temuan session-switch ketika identitas
+  Google sudah dimiliki user lain diperbaiki pada `9b4b69a`; retest menolak konflik `409`
+  dan mempertahankan session Owner lokal.
 - Bukti compatibility ada di
   [`2026-08-30-b1-staging-compatibility`](qa/evidence/2026-08-30-b1-staging-compatibility/README.md).
 

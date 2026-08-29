@@ -7,8 +7,9 @@
 - Midtrans, refund, payout, dan dokumen legal tetap sandbox/simulasi. Tidak ada uang atau
   dokumen legal nyata yang diproses oleh build B1.
 - Google OIDC staging sudah memiliki credential, state, test user, dan callback domain.
-  Authorization redirect sudah lulus; consent/callback end-to-end belum dijalankan karena
-  memerlukan persetujuan pengiriman profil Google pribadi Project Owner.
+  Authorization, consent, callback, serta login Google end-to-end sudah lulus. Identitas
+  yang sudah tertaut ke user lain ditolak `409`; pengujian live linking identitas Google
+  baru tidak diulang karena tidak ada profil Google kedua yang diotorisasi untuk dibagikan.
 - Leaflet telah menggantikan MapLibre. Standard OpenStreetMap tiles hanya digunakan untuk
   development/staging; provider tile production belum dipilih. Riwayat akar masalah ada
   di [MAPLIBRE_REMEDIATION.md](MAPLIBRE_REMEDIATION.md).

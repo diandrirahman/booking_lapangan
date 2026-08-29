@@ -97,8 +97,9 @@ variables pada Vercel. Jangan menaruh nilainya di repository.
 | `GOOGLE_REDIRECT_URI` | Sudah menunjuk callback same-origin staging |
 
 `MIDTRANS_*` dan `GOOGLE_*` sudah tersedia. UI tetap berlabel Sandbox/Simulasi. Google
-consent end-to-end tetap memerlukan persetujuan action-time Project Owner karena mengirim
-profil Google pribadi ke aplikasi staging.
+consent/callback end-to-end telah dijalankan dengan persetujuan action-time Project Owner.
+Konflik identitas yang telah tertaut ke user lain ditolak `409` tanpa mengganti session
+lokal.
 
 ## Pemeriksaan setelah dependency tersedia
 

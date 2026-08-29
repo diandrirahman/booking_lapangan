@@ -11,9 +11,11 @@ Vercel frontend/API, TiDB, Redis, Tigris private-media delivery, Midtrans Sandbo
 empat role, dan realtime staging telah lulus compatibility smoke. Realtime end-to-end
 tercatat 231 ms, 236 ms, dan 210 ms setelah API dipindahkan dari `iad1` ke `sin1`.
 
-Google OIDC baru diverifikasi sampai authorization redirect. Consent/callback penuh dan
-matriks visual staging empat role × empat breakpoint masih menunggu pelaksanaan, sehingga
-laporan ini belum menyatakan final staging sign-off.
+Google OIDC consent/callback penuh sudah lulus. Compatibility QA menemukan dan menutup
+session-switch saat identitas Google sudah tertaut ke user lain; deployment akhir menolak
+konflik `409` dan mempertahankan session Owner. Matriks visual staging empat role × empat
+breakpoint masih menunggu pelaksanaan, sehingga laporan ini belum menyatakan final staging
+sign-off.
 
 Bukti: [`2026-08-30-b1-staging-compatibility`](evidence/2026-08-30-b1-staging-compatibility/README.md).
 

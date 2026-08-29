@@ -43,14 +43,14 @@ Persetujuan tercatat: pesan `Diterima` dari Project Owner melalui percakapan Cod
 
 - [x] Frontend/API Vercel sehat.
 - [x] Compatibility TiDB dan signed upload Tigris lulus.
-- [ ] Google OIDC consent/callback end-to-end lulus.
+- [x] Google OIDC consent/callback end-to-end lulus.
 - [x] Midtrans Sandbox lulus.
 - [x] Realtime staging diuji minimal tiga kali dan setiap hasil memenuhi SLO.
 - [ ] Retest staging empat role × empat breakpoint selesai.
 
-Catatan implementer: Midtrans Sandbox telah lulus. Google OIDC start/callback configuration
-telah lulus, tetapi consent end-to-end belum dijalankan. Hasil teknis dan screenshot smoke
-ada di `evidence/2026-08-30-b1-staging-compatibility/`.
+Catatan implementer: Midtrans Sandbox dan Google OIDC consent/callback telah lulus.
+Konflik identitas Google ditolak `409` tanpa mengganti session lokal. Hasil teknis dan
+screenshot smoke ada di `evidence/2026-08-30-b1-staging-compatibility/`.
 
 ### Keputusan akhir staging
 
