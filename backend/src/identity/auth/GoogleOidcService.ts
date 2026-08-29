@@ -124,6 +124,7 @@ export class GoogleOidcService {
     claims: GoogleClaims,
     linkingUserId: string | null,
   ): Promise<string> {
+    const linkingDatabaseId = linkingUserId ? parsePublicId(linkingUserId) : null;
     const [googleIdentity] = await this.database.db
       .select({ userId: authIdentities.userId })
       .from(authIdentities)
@@ -134,7 +135,16 @@ export class GoogleOidcService {
         ),
       )
       .limit(1);
-    if (googleIdentity) return formatPublicId(googleIdentity.userId);
+    if (googleIdentity) {
+      if (linkingDatabaseId && googleIdentity.userId !== linkingDatabaseId) {
+        throw new ApiError(
+          409,
+          "GOOGLE_IDENTITY_ALREADY_LINKED",
+          "Akun Google sudah tertaut ke akun LapanganGo lain.",
+        );
+      }
+      return formatPublicId(googleIdentity.userId);
+    }
 
     const normalizedEmail = claims.email.trim().toLowerCase();
     const [existingUser] = await this.database.db
@@ -142,7 +152,6 @@ export class GoogleOidcService {
       .from(users)
       .where(eq(users.email, normalizedEmail))
       .limit(1);
-    const linkingDatabaseId = linkingUserId ? parsePublicId(linkingUserId) : null;
     if (existingUser && existingUser.id !== linkingDatabaseId) {
       throw new ApiError(
         409,
@@ -152,8 +161,8 @@ export class GoogleOidcService {
     }
 
     return this.database.db.transaction(async (transaction) => {
-      let userId = existingUser?.id;
-      if (!existingUser) {
+      let userId = linkingDatabaseId ?? existingUser?.id;
+      if (!userId) {
         const [createdUser] = await transaction
           .insert(users)
           .values({
