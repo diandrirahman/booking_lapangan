@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { NotificationPreferenceUpdate } from "@lapangango/api-client";
 import {
   BellRing,
   CalendarClock,
@@ -86,23 +87,18 @@ export function NotificationPreferencesCard() {
     queryFn: () => apiClient.listNotificationPreferences(),
   });
   const update = useMutation({
-    mutationFn: (input: {
-      eventType: string;
-      channel: "IN_APP" | "EMAIL";
-      enabled: boolean;
-    }) =>
-      apiClient.updateNotificationPreference(
-        input.eventType,
-        input.channel,
-        input.enabled,
-      ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["notifications", "preferences"] }),
+    mutationFn: (input: NotificationPreferenceUpdate) =>
+      apiClient.updateNotificationPreference(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["notifications", "preferences"],
+      });
+    },
   });
   const enabled = (eventType: string, channel: string) =>
     preferences.data?.items.find(
       (item) => item.eventType === eventType && item.channel === channel,
-    )?.enabled !== 0;
+    )?.enabled ?? true;
   if (preferences.isError) {
     return (
       <EmptyState
@@ -148,13 +144,14 @@ export function NotificationPreferencesCard() {
                     }`}
                     checked={enabled(eventType, channel)}
                     disabled={criticalEvents.has(eventType) || update.isPending}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      update.reset();
                       update.mutate({
                         eventType,
                         channel,
                         enabled: event.target.checked,
-                      })
-                    }
+                      });
+                    }}
                   />
                   <span aria-hidden="true" />
                   <small>{channel === "IN_APP" ? "Dalam aplikasi" : "Email"}</small>
@@ -164,6 +161,17 @@ export function NotificationPreferencesCard() {
           );
         })}
       </div>
+      {update.isPending && <p role="status">Menyimpan preferensi…</p>}
+      {update.isSuccess && (
+        <p className="inline-success" role="status">
+          Preferensi berhasil disimpan.
+        </p>
+      )}
+      {update.isError && (
+        <p className="field-error" role="alert">
+          {update.error.message}
+        </p>
+      )}
       <p className="notification-preference-note">
         <LockKeyhole /> Notifikasi kritis selalu aktif untuk keamanan transaksi.
       </p>

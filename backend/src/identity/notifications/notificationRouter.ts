@@ -3,7 +3,11 @@ import { z } from "zod";
 import { asyncHandler } from "../../http/asyncHandler.js";
 import { publicIdSchema } from "../../http/schemas/publicId.js";
 import { requireSession } from "../auth/sessionMiddleware.js";
-import type { NotificationService } from "./NotificationService.js";
+import {
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_PREFERENCE_EVENTS,
+  type NotificationService,
+} from "./NotificationService.js";
 import type { TenantAuthorizationService } from "../../tenant/authorization/TenantAuthorizationService.js";
 
 export function createNotificationRouter(
@@ -55,8 +59,8 @@ export function createNotificationRouter(
     asyncHandler(async (request, response) => {
       const input = z
         .object({
-          eventType: z.string().trim().min(2).max(60),
-          channel: z.enum(["IN_APP", "EMAIL"]),
+          eventType: z.enum(NOTIFICATION_PREFERENCE_EVENTS),
+          channel: z.enum(NOTIFICATION_CHANNELS),
           enabled: z.boolean(),
         })
         .parse(request.body);

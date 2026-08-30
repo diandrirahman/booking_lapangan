@@ -557,7 +557,7 @@ export function BusinessB2ListPage({
   const createPromo = useMutation({
     mutationFn: () =>
       apiClient.createBusinessPromotion({
-        tenantId: tenant,
+        tenantId: tenant!,
         code: promoCode,
         name: promoName,
         description: "Promo owner lokal",

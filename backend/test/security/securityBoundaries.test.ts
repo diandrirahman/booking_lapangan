@@ -5,6 +5,8 @@ import { createApp } from "../../src/app.js";
 import { loadEnvironment } from "../../src/config/environment.js";
 import { formatPublicId } from "../../src/database/ids.js";
 import { ApiError } from "../../src/http/ApiError.js";
+import type { FinanceService } from "../../src/finance/FinanceService.js";
+import { createFinanceRouter } from "../../src/finance/financeRouter.js";
 import { SessionStoreUnavailableError } from "../../src/identity/auth/domain.js";
 import { requireSession } from "../../src/identity/auth/sessionMiddleware.js";
 import { PaymentService } from "../../src/payment/application/PaymentService.js";
@@ -286,5 +288,86 @@ describe("security boundaries", () => {
       .set("Cookie", `${environment.SESSION_COOKIE_NAME}=customer-token`);
     expect(response.status).toBe(403);
     expect(listAudit).not.toHaveBeenCalled();
+  });
+
+  it("menolak funding PLATFORM pada endpoint promo bisnis", async () => {
+    const createPromotion = vi.fn();
+    const requirePermission = vi.fn();
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "owner-session",
+          userId: formatPublicId(1),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [
+        createFinanceRouter(
+          { createPromotion } as unknown as FinanceService,
+          { requirePermission } as unknown as TenantAuthorizationService,
+        ),
+      ],
+    });
+
+    const response = await request(app)
+      .post("/api/v1/business/promotions")
+      .set("Origin", environment.APP_ORIGIN)
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=owner-token`)
+      .set("Idempotency-Key", "forged-platform-promotion")
+      .send({
+        tenantId: formatPublicId(1),
+        code: "FORGEDPLATFORM",
+        name: "Forged platform promotion",
+        discountType: "PERCENT",
+        discountValue: 1_000,
+        startsAt: "2026-08-30T00:00:00.000Z",
+        endsAt: "2026-09-30T00:00:00.000Z",
+        fundingSource: "PLATFORM",
+      });
+
+    expect(response.status).toBe(422);
+    expect(createPromotion).not.toHaveBeenCalled();
+    expect(requirePermission).not.toHaveBeenCalled();
+  });
+
+  it("meneruskan assignment Staff saat membaca promo bisnis", async () => {
+    const assignedVenueIds = [formatPublicId(1)];
+    const listPromotions = vi.fn().mockResolvedValue([]);
+    const requirePermission = vi.fn().mockResolvedValue({
+      role: "STAFF",
+      assignedVenueIds,
+    });
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "staff-session",
+          userId: formatPublicId(200),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [
+        createFinanceRouter(
+          { listPromotions } as unknown as FinanceService,
+          { requirePermission } as unknown as TenantAuthorizationService,
+        ),
+      ],
+    });
+
+    const response = await request(app)
+      .get("/api/v1/business/promotions")
+      .query({ tenantId: formatPublicId(1) })
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=staff-token`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ items: [] });
+    expect(listPromotions).toHaveBeenCalledWith(formatPublicId(1), assignedVenueIds);
   });
 });

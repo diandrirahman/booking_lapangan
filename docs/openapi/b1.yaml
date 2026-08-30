@@ -1746,7 +1746,7 @@ paths:
         content:
           {
             application/json:
-              { schema: { $ref: "#/components/schemas/PromotionInput" } },
+              { schema: { $ref: "#/components/schemas/BusinessPromotionInput" } },
           }
       responses:
         "201":
@@ -1812,7 +1812,7 @@ paths:
         content:
           {
             application/json:
-              { schema: { $ref: "#/components/schemas/PromotionInput" } },
+              { schema: { $ref: "#/components/schemas/AdminPromotionInput" } },
           }
       responses:
         "201":
@@ -2094,7 +2094,12 @@ paths:
           {
             description: User notification preferences,
             content:
-              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+              {
+                application/json:
+                  {
+                    schema: { $ref: "#/components/schemas/NotificationPreferenceList" },
+                  },
+              },
           }
     put:
       tags: [Auth]
@@ -2102,9 +2107,14 @@ paths:
       requestBody:
         required: true
         content:
-          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+          {
+            application/json:
+              { schema: { $ref: "#/components/schemas/NotificationPreferenceUpdate" } },
+          }
       responses:
         "204": { description: Preference updated. }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
         "413": { $ref: "#/components/responses/PayloadTooLarge" }
   /notifications/reminder-options:
     get:
@@ -2554,12 +2564,49 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/B2Object" }
-    PromotionInput:
+    NotificationPreference:
       type: object
-      required:
-        [code, name, discountType, discountValue, startsAt, endsAt, fundingSource]
+      required: [eventType, channel, enabled]
       properties:
-        tenantId: { type: [string, "null"] }
+        eventType:
+          type: string
+          enum:
+            [
+              booking.status_changed,
+              payment.verified,
+              refund.result,
+              transaction.dispute,
+              booking.reminder,
+            ]
+        channel: { type: string, enum: [IN_APP, EMAIL] }
+        enabled: { type: boolean }
+    NotificationPreferenceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/NotificationPreference" }
+    NotificationPreferenceUpdate:
+      type: object
+      required: [eventType, channel, enabled]
+      properties:
+        eventType:
+          type: string
+          enum:
+            [
+              booking.status_changed,
+              payment.verified,
+              refund.result,
+              transaction.dispute,
+              booking.reminder,
+            ]
+        channel: { type: string, enum: [IN_APP, EMAIL] }
+        enabled: { type: boolean }
+    PromotionBaseInput:
+      type: object
+      required: [code, name, discountType, discountValue, startsAt, endsAt]
+      properties:
         code: { type: string, minLength: 2, maxLength: 40 }
         name: { type: string, minLength: 2, maxLength: 120 }
         description: { type: string, maxLength: 500 }
@@ -2575,7 +2622,6 @@ components:
         perUserLimit: { type: integer, minimum: 1, maximum: 100 }
         firstBookingOnly: { type: boolean }
         paymentMethod: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
-        fundingSource: { type: string, enum: [OWNER, PLATFORM] }
         budgetAmount: { type: integer, minimum: 1 }
         scopes:
           type: array
@@ -2586,6 +2632,22 @@ components:
             properties:
               type: { type: string, enum: [VENUE, SPORT, COURT] }
               referenceId: { $ref: "#/components/schemas/PublicId" }
+    BusinessPromotionInput:
+      allOf:
+        - { $ref: "#/components/schemas/PromotionBaseInput" }
+        - type: object
+          required: [tenantId, fundingSource]
+          properties:
+            tenantId: { $ref: "#/components/schemas/PublicId" }
+            fundingSource: { type: string, enum: [OWNER] }
+    AdminPromotionInput:
+      allOf:
+        - { $ref: "#/components/schemas/PromotionBaseInput" }
+        - type: object
+          required: [tenantId, fundingSource]
+          properties:
+            tenantId: { type: [string, "null"] }
+            fundingSource: { type: string, enum: [PLATFORM] }
     CommissionConfigInput:
       type: object
       required: [tenantId, rateBasisPoints, effectiveFrom, gatewayFeeFunding, reason]

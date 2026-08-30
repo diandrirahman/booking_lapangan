@@ -44,6 +44,20 @@ test("Customer membuka review, support, dan preferensi notifikasi server-backed"
   await page.getByRole("button", { name: "Atur preferensi" }).click();
   await expect(page.getByText("Pembayaran terverifikasi")).toBeVisible();
   await expect(page.getByText("Wajib aktif").first()).toBeVisible();
+  const reminderEmail = page.getByRole("checkbox", {
+    name: "Reminder bermain melalui email",
+  });
+  const initiallyEnabled = await reminderEmail.isChecked();
+  await reminderEmail.click();
+  await expect(page.getByRole("status")).toContainText("Preferensi berhasil disimpan");
+  await expect(reminderEmail).toBeChecked({ checked: !initiallyEnabled });
+
+  await page.reload();
+  await page.getByRole("button", { name: "Atur preferensi" }).click();
+  await expect(reminderEmail).toBeChecked({ checked: !initiallyEnabled });
+  await reminderEmail.click();
+  await expect(page.getByRole("status")).toContainText("Preferensi berhasil disimpan");
+  await expect(reminderEmail).toBeChecked({ checked: initiallyEnabled });
   await expectNoHorizontalOverflow(page);
   await expectNoBlockingAccessibilityViolations(page);
 });

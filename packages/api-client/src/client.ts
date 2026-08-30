@@ -46,6 +46,13 @@ export type AdminVerification = components["schemas"]["AdminVerification"];
 export type AdminAuditEntry = components["schemas"]["AdminAuditEntry"];
 export type AdminAuditPage = components["schemas"]["AdminAuditPage"];
 export type AccountNotification = components["schemas"]["AccountNotification"];
+export type BusinessPromotionInput = components["schemas"]["BusinessPromotionInput"];
+export type AdminPromotionInput = components["schemas"]["AdminPromotionInput"];
+export type NotificationPreference = components["schemas"]["NotificationPreference"];
+export type NotificationPreferenceList =
+  components["schemas"]["NotificationPreferenceList"];
+export type NotificationPreferenceUpdate =
+  components["schemas"]["NotificationPreferenceUpdate"];
 
 export interface CreateOfflineBookingInput {
   tenantId: string;
@@ -831,7 +838,7 @@ export class LapanganGoApiClient {
     return this.request(`/business/promotions?${queryString({ tenantId })}`);
   }
 
-  createBusinessPromotion(input: Record<string, unknown>): Promise<B2ListItem> {
+  createBusinessPromotion(input: BusinessPromotionInput): Promise<B2ListItem> {
     return this.request("/business/promotions", {
       method: "POST",
       headers: { "Idempotency-Key": crypto.randomUUID() },
@@ -847,7 +854,7 @@ export class LapanganGoApiClient {
     });
   }
 
-  createAdminPromotion(input: Record<string, unknown>): Promise<B2ListItem> {
+  createAdminPromotion(input: AdminPromotionInput): Promise<B2ListItem> {
     return this.request("/admin/promotions", {
       method: "POST",
       headers: { "Idempotency-Key": crypto.randomUUID() },
@@ -901,18 +908,14 @@ export class LapanganGoApiClient {
     );
   }
 
-  listNotificationPreferences(): Promise<{ items: B2ListItem[] }> {
+  listNotificationPreferences(): Promise<NotificationPreferenceList> {
     return this.request("/notifications/preferences");
   }
 
-  updateNotificationPreference(
-    eventType: string,
-    channel: "IN_APP" | "EMAIL",
-    enabled: boolean,
-  ): Promise<void> {
+  updateNotificationPreference(input: NotificationPreferenceUpdate): Promise<void> {
     return this.request("/notifications/preferences", {
       method: "PUT",
-      body: JSON.stringify({ eventType, channel, enabled }),
+      body: JSON.stringify(input),
     });
   }
 

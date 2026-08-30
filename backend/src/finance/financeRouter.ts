@@ -208,9 +208,9 @@ export function createFinanceRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = promotionSchema
-        .extend({ tenantId: publicIdSchema })
+        .extend({ tenantId: publicIdSchema, fundingSource: z.literal("OWNER") })
         .parse(request.body);
-      await authorization.requirePermission(
+      const access = await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
         "promotions.manage",
@@ -222,6 +222,8 @@ export function createFinanceRouter(
             actorUserId: request.auth!.userId,
             reason: input.description ?? "Promo tenant dibuat",
             idempotencyKey: requireIdempotencyKey(request.header("Idempotency-Key")),
+            allowedVenueIds:
+              access.role === "STAFF" ? access.assignedVenueIds : undefined,
           },
           requestAuditContext(request),
         ),
@@ -233,12 +235,17 @@ export function createFinanceRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const tenantId = publicIdSchema.parse(request.query.tenantId);
-      await authorization.requirePermission(
+      const access = await authorization.requirePermission(
         request.auth!.userId,
         tenantId,
         "promotions.manage",
       );
-      response.json({ items: await service.listPromotions(tenantId) });
+      response.json({
+        items: await service.listPromotions(
+          tenantId,
+          access.role === "STAFF" ? access.assignedVenueIds : undefined,
+        ),
+      });
     }),
   );
   router.get(
@@ -312,14 +319,12 @@ export function createFinanceRouter(
     asyncHandler(async (request, response) => {
       await authorization.requirePlatformAdmin(request.auth!.userId);
       const input = promotionSchema
-        .extend({ tenantId: publicIdSchema.nullable().default(null) })
+        .extend({
+          tenantId: publicIdSchema.nullable().default(null),
+          fundingSource: z.literal("PLATFORM"),
+        })
         .parse(request.body);
-      if (
-        input.fundingSource !== "PLATFORM" ||
-        !input.budgetAmount ||
-        !input.quota ||
-        !input.maximumDiscount
-      ) {
+      if (!input.budgetAmount || !input.quota || !input.maximumDiscount) {
         throw new ApiError(
           422,
           "PLATFORM_PROMOTION_LIMITS_REQUIRED",

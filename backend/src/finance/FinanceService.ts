@@ -21,9 +21,11 @@ import {
   promotions,
   promotionScopes,
   refunds,
+  sports,
   tenantFinanceSettings,
   tenants,
   courts,
+  venueSports,
   venues,
 } from "../database/schema/index.js";
 import { ApiError } from "../http/ApiError.js";
@@ -91,6 +93,7 @@ export interface PromotionInput {
   actorUserId?: string | undefined;
   reason?: string | undefined;
   idempotencyKey: string;
+  allowedVenueIds?: string[] | undefined;
 }
 
 export class FinanceService {
@@ -1248,9 +1251,34 @@ export class FinanceService {
   ) {
     return this.database.db.transaction(async (transaction) => {
       const actorUserId = parsePublicId(input.actorUserId);
+      const tenantDatabaseId = input.tenantId ? parsePublicId(input.tenantId) : null;
+      const scope = tenantCommandScope("commission.create", input.tenantId);
       const [existing] = await transaction
         .select({ resourceId: commandIdempotency.resourceId })
         .from(commandIdempotency)
+        .innerJoin(
+          commissionConfigs,
+          eq(commissionConfigs.id, commandIdempotency.resourceId),
+        )
+        .where(
+          and(
+            eq(commandIdempotency.scope, scope),
+            eq(commandIdempotency.actorUserId, actorUserId),
+            eq(commandIdempotency.idempotencyKey, input.idempotencyKey),
+          ),
+        )
+        .limit(1);
+      if (existing?.resourceId) return { id: formatPublicId(existing.resourceId) };
+      const [legacy] = await transaction
+        .select({
+          resourceId: commandIdempotency.resourceId,
+          tenantId: commissionConfigs.tenantId,
+        })
+        .from(commandIdempotency)
+        .innerJoin(
+          commissionConfigs,
+          eq(commissionConfigs.id, commandIdempotency.resourceId),
+        )
         .where(
           and(
             eq(commandIdempotency.scope, "commission.create"),
@@ -1259,11 +1287,13 @@ export class FinanceService {
           ),
         )
         .limit(1);
-      if (existing?.resourceId) return { id: formatPublicId(existing.resourceId) };
+      if (legacy?.resourceId && legacy.tenantId === tenantDatabaseId) {
+        return { id: formatPublicId(legacy.resourceId) };
+      }
       const createdRows = await transaction
         .insert(commissionConfigs)
         .values({
-          tenantId: input.tenantId ? parsePublicId(input.tenantId) : null,
+          tenantId: tenantDatabaseId,
           rateBasisPoints: input.rateBasisPoints,
           effectiveFrom: input.effectiveFrom,
           effectiveTo: input.effectiveTo,
@@ -1293,7 +1323,7 @@ export class FinanceService {
         ...auditContext,
       });
       await transaction.insert(commandIdempotency).values({
-        scope: "commission.create",
+        scope,
         idempotencyKey: input.idempotencyKey,
         actorUserId,
         resourceId: created.id,
@@ -1341,9 +1371,32 @@ export class FinanceService {
         throw new ApiError(401, "AUTHENTICATION_REQUIRED", "Akun aktif diperlukan.");
       }
       const actorUserId = parsePublicId(input.actorUserId);
+      const tenantDatabaseId = input.tenantId ? parsePublicId(input.tenantId) : null;
+      const scope = tenantCommandScope("promotion.create", input.tenantId);
+      await this.validatePromotionScopes(transaction, input, tenantDatabaseId);
       const [existing] = await transaction
-        .select({ resourceId: commandIdempotency.resourceId })
+        .select({ resourceId: commandIdempotency.resourceId, code: promotions.code })
         .from(commandIdempotency)
+        .innerJoin(promotions, eq(promotions.id, commandIdempotency.resourceId))
+        .where(
+          and(
+            eq(commandIdempotency.scope, scope),
+            eq(commandIdempotency.actorUserId, actorUserId),
+            eq(commandIdempotency.idempotencyKey, input.idempotencyKey),
+          ),
+        )
+        .limit(1);
+      if (existing?.resourceId) {
+        return { id: existing.resourceId, code: existing.code ?? normalizedCode };
+      }
+      const [legacy] = await transaction
+        .select({
+          resourceId: commandIdempotency.resourceId,
+          tenantId: promotions.tenantId,
+          code: promotions.code,
+        })
+        .from(commandIdempotency)
+        .innerJoin(promotions, eq(promotions.id, commandIdempotency.resourceId))
         .where(
           and(
             eq(commandIdempotency.scope, "promotion.create"),
@@ -1352,11 +1405,13 @@ export class FinanceService {
           ),
         )
         .limit(1);
-      if (existing?.resourceId) return { id: existing.resourceId };
+      if (legacy?.resourceId && legacy.tenantId === tenantDatabaseId) {
+        return { id: legacy.resourceId, code: legacy.code ?? normalizedCode };
+      }
       const createdRows = await transaction
         .insert(promotions)
         .values({
-          tenantId: input.tenantId ? parsePublicId(input.tenantId) : null,
+          tenantId: tenantDatabaseId,
           code: normalizedCode,
           name: input.name,
           description: input.description,
@@ -1406,19 +1461,20 @@ export class FinanceService {
         ...auditContext,
       });
       await transaction.insert(commandIdempotency).values({
-        scope: "promotion.create",
+        scope,
         idempotencyKey: input.idempotencyKey,
         actorUserId,
         resourceId: result.id,
         responseStatus: 201,
         responseBody: { id: formatPublicId(result.id), code: normalizedCode },
       });
-      return result;
+      return { id: result.id, code: normalizedCode };
     });
-    return { id: formatPublicId(created.id), code: normalizedCode };
+    return { id: formatPublicId(created.id), code: created.code };
   }
 
-  async listPromotions(tenantId?: string) {
+  async listPromotions(tenantId?: string, allowedVenueIds?: string[]) {
+    if (allowedVenueIds?.length === 0) return [];
     const rows = await this.database.db
       .select()
       .from(promotions)
@@ -1431,11 +1487,137 @@ export class FinanceService {
           : undefined,
       )
       .orderBy(desc(promotions.startsAt));
-    return rows.map((row) => ({
+    const visibleRows = allowedVenueIds
+      ? await this.filterPromotionsForVenues(rows, allowedVenueIds)
+      : rows;
+    return visibleRows.map((row) => ({
       ...row,
       id: formatPublicId(row.id),
       tenantId: row.tenantId ? formatPublicId(row.tenantId) : null,
     }));
+  }
+
+  private async validatePromotionScopes(
+    transaction: Transaction,
+    input: PromotionInput,
+    tenantId: number | null,
+  ): Promise<void> {
+    const scopes = input.scopes ?? [];
+    const venueIds = scopes
+      .filter((scope) => scope.type === "VENUE")
+      .map((scope) => parsePublicId(scope.referenceId));
+    const courtIds = scopes
+      .filter((scope) => scope.type === "COURT")
+      .map((scope) => parsePublicId(scope.referenceId));
+    const sportIds = scopes
+      .filter((scope) => scope.type === "SPORT")
+      .map((scope) => parsePublicId(scope.referenceId));
+    const venueRows = venueIds.length
+      ? await transaction
+          .select({ id: venues.id, tenantId: venues.tenantId })
+          .from(venues)
+          .where(inArray(venues.id, venueIds))
+      : [];
+    const courtRows = courtIds.length
+      ? await transaction
+          .select({ id: courts.id, venueId: courts.venueId, tenantId: venues.tenantId })
+          .from(courts)
+          .innerJoin(venues, eq(venues.id, courts.venueId))
+          .where(inArray(courts.id, courtIds))
+      : [];
+    const sportRows = sportIds.length
+      ? await transaction
+          .select({ id: sports.id })
+          .from(sports)
+          .where(inArray(sports.id, sportIds))
+      : [];
+    if (
+      venueRows.length !== new Set(venueIds).size ||
+      courtRows.length !== new Set(courtIds).size ||
+      sportRows.length !== new Set(sportIds).size ||
+      (tenantId !== null &&
+        [...venueRows, ...courtRows].some((row) => row.tenantId !== tenantId))
+    ) {
+      throw new ApiError(
+        404,
+        "PROMOTION_SCOPE_NOT_FOUND",
+        "Scope promo tidak ditemukan pada workspace aktif.",
+      );
+    }
+    if (input.allowedVenueIds === undefined) return;
+    const allowedVenueIds = new Set(input.allowedVenueIds.map(parsePublicId));
+    const scopedVenueIds = new Set([
+      ...venueRows.map((row) => row.id),
+      ...courtRows.map((row) => row.venueId),
+    ]);
+    if (
+      allowedVenueIds.size === 0 ||
+      scopedVenueIds.size === 0 ||
+      [...scopedVenueIds].some((venueId) => !allowedVenueIds.has(venueId))
+    ) {
+      throw new ApiError(
+        403,
+        "PROMOTION_VENUE_ACCESS_DENIED",
+        "Staff hanya dapat mengelola promo untuk venue yang ditugaskan.",
+      );
+    }
+  }
+
+  private async filterPromotionsForVenues<TRow extends { id: number }>(
+    rows: TRow[],
+    allowedVenueIds: string[],
+  ): Promise<TRow[]> {
+    if (rows.length === 0) return [];
+    const venueIds = allowedVenueIds.map(parsePublicId);
+    const [scopeRows, courtRows, sportRows] = await Promise.all([
+      this.database.db
+        .select()
+        .from(promotionScopes)
+        .where(
+          inArray(
+            promotionScopes.promotionId,
+            rows.map((row) => row.id),
+          ),
+        ),
+      this.database.db
+        .select({ id: courts.id, venueId: courts.venueId })
+        .from(courts)
+        .where(inArray(courts.venueId, venueIds)),
+      this.database.db
+        .select({ venueId: venueSports.venueId, sportId: venueSports.sportId })
+        .from(venueSports)
+        .where(inArray(venueSports.venueId, venueIds)),
+    ]);
+    return rows.filter((promotion) => {
+      const scopes = scopeRows.filter((scope) => scope.promotionId === promotion.id);
+      if (scopes.length === 0) return true;
+      return venueIds.some((venueId) => {
+        const courtsAtVenue = new Set(
+          courtRows
+            .filter((court) => court.venueId === venueId)
+            .map((court) => court.id),
+        );
+        const sportsAtVenue = new Set(
+          sportRows
+            .filter((sport) => sport.venueId === venueId)
+            .map((sport) => sport.sportId),
+        );
+        return ["VENUE", "COURT", "SPORT"].every((scopeType) => {
+          const typedScopes = scopes.filter((scope) => scope.scopeType === scopeType);
+          if (typedScopes.length === 0) return true;
+          if (scopeType === "VENUE") {
+            return typedScopes.some((scope) => scope.scopeReferenceId === venueId);
+          }
+          const allowedReferences =
+            scopeType === "COURT" ? courtsAtVenue : sportsAtVenue;
+          return typedScopes.some(
+            (scope) =>
+              scope.scopeReferenceId !== null &&
+              allowedReferences.has(scope.scopeReferenceId),
+          );
+        });
+      });
+    });
   }
 
   private async resolveCommission(
@@ -1862,4 +2044,11 @@ function csvCell(value: unknown): string {
             : (JSON.stringify(value) ?? "");
   const safeValue = /^\s*[=+\-@]/.test(serialized) ? `'${serialized}` : serialized;
   return `"${safeValue.replaceAll('"', '""')}"`;
+}
+
+function tenantCommandScope(
+  command: "commission.create" | "promotion.create",
+  tenantId: string | null,
+) {
+  return `${command}:${tenantId ?? "platform"}`;
 }

@@ -74,18 +74,40 @@ export class NotificationService {
   }
 
   async listPreferences(userId: string) {
-    return this.database.db
+    const rows = await this.database.db
       .select()
       .from(notificationPreferences)
       .where(eq(notificationPreferences.userId, parsePublicId(userId)));
+    return rows.flatMap((row) => {
+      if (
+        !isNotificationPreferenceEvent(row.eventType) ||
+        !isNotificationChannel(row.channel)
+      ) {
+        return [];
+      }
+      return [
+        {
+          eventType: row.eventType,
+          channel: row.channel,
+          enabled: storedPreferenceEnabled(row.enabled),
+        },
+      ];
+    });
   }
 
   async setPreference(
     userId: string,
     eventType: string,
-    channel: "IN_APP" | "EMAIL",
+    channel: NotificationChannel,
     enabled: boolean,
   ): Promise<void> {
+    if (!isNotificationPreferenceEvent(eventType)) {
+      throw new ApiError(
+        422,
+        "NOTIFICATION_EVENT_UNSUPPORTED",
+        "Jenis notifikasi tidak dapat diatur.",
+      );
+    }
     if (CRITICAL_EVENTS.has(eventType) && !enabled) {
       throw new ApiError(
         409,
@@ -210,7 +232,7 @@ export class NotificationService {
     for (const channel of ["IN_APP", "EMAIL"] as const) {
       const enabled =
         input.critical ||
-        preferences.find((row) => row.channel === channel)?.enabled !== 0;
+        preferenceEnabled(preferences.find((row) => row.channel === channel)?.enabled);
       if (!enabled) continue;
       const result = await transaction
         .insert(notificationDeliveries)
@@ -259,9 +281,40 @@ interface NotificationInput {
   critical: boolean;
 }
 
-const CRITICAL_EVENTS = new Set([
+const CRITICAL_NOTIFICATION_EVENTS = [
   "booking.status_changed",
   "payment.verified",
   "refund.result",
   "transaction.dispute",
-]);
+] as const;
+
+const CRITICAL_EVENTS = new Set<string>(CRITICAL_NOTIFICATION_EVENTS);
+
+export const NOTIFICATION_PREFERENCE_EVENTS = [
+  ...CRITICAL_NOTIFICATION_EVENTS,
+  "booking.reminder",
+] as const;
+
+export const NOTIFICATION_CHANNELS = ["IN_APP", "EMAIL"] as const;
+
+export type NotificationPreferenceEvent =
+  (typeof NOTIFICATION_PREFERENCE_EVENTS)[number];
+export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
+
+function isNotificationPreferenceEvent(
+  eventType: string,
+): eventType is NotificationPreferenceEvent {
+  return (NOTIFICATION_PREFERENCE_EVENTS as readonly string[]).includes(eventType);
+}
+
+function isNotificationChannel(channel: string): channel is NotificationChannel {
+  return (NOTIFICATION_CHANNELS as readonly string[]).includes(channel);
+}
+
+function preferenceEnabled(value: unknown): boolean {
+  return value === undefined || storedPreferenceEnabled(value);
+}
+
+function storedPreferenceEnabled(value: unknown): boolean {
+  return value === true || value === 1 || value === "1";
+}

@@ -1777,8 +1777,24 @@ export interface components {
         B2List: {
             items: components["schemas"]["B2Object"][];
         };
-        PromotionInput: {
-            tenantId?: string | null;
+        NotificationPreference: {
+            /** @enum {string} */
+            eventType: "booking.status_changed" | "payment.verified" | "refund.result" | "transaction.dispute" | "booking.reminder";
+            /** @enum {string} */
+            channel: "IN_APP" | "EMAIL";
+            enabled: boolean;
+        };
+        NotificationPreferenceList: {
+            items: components["schemas"]["NotificationPreference"][];
+        };
+        NotificationPreferenceUpdate: {
+            /** @enum {string} */
+            eventType: "booking.status_changed" | "payment.verified" | "refund.result" | "transaction.dispute" | "booking.reminder";
+            /** @enum {string} */
+            channel: "IN_APP" | "EMAIL";
+            enabled: boolean;
+        };
+        PromotionBaseInput: {
             code: string;
             name: string;
             description?: string;
@@ -1798,14 +1814,22 @@ export interface components {
             firstBookingOnly?: boolean;
             /** @enum {string} */
             paymentMethod?: "FULL" | "DP" | "PAY_AT_VENUE";
-            /** @enum {string} */
-            fundingSource: "OWNER" | "PLATFORM";
             budgetAmount?: number;
             scopes?: {
                 /** @enum {string} */
                 type: "VENUE" | "SPORT" | "COURT";
                 referenceId: components["schemas"]["PublicId"];
             }[];
+        };
+        BusinessPromotionInput: components["schemas"]["PromotionBaseInput"] & {
+            tenantId: components["schemas"]["PublicId"];
+            /** @enum {string} */
+            fundingSource: "OWNER";
+        };
+        AdminPromotionInput: components["schemas"]["PromotionBaseInput"] & {
+            tenantId: string | null;
+            /** @enum {string} */
+            fundingSource: "PLATFORM";
         };
         CommissionConfigInput: {
             tenantId: string | null;
@@ -4625,7 +4649,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PromotionInput"];
+                "application/json": components["schemas"]["BusinessPromotionInput"];
             };
         };
         responses: {
@@ -4719,7 +4743,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PromotionInput"];
+                "application/json": components["schemas"]["AdminPromotionInput"];
             };
         };
         responses: {
@@ -5092,7 +5116,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["B2List"];
+                    "application/json": components["schemas"]["NotificationPreferenceList"];
                 };
             };
         };
@@ -5106,7 +5130,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["B2Object"];
+                "application/json": components["schemas"]["NotificationPreferenceUpdate"];
             };
         };
         responses: {
@@ -5117,7 +5141,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            409: components["responses"]["Conflict"];
             413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listNotificationReminderOptions: {
