@@ -34,15 +34,15 @@ Project Owner memeriksa laporan dan evidence.
 
 ## Gate staging
 
-Status teknis: **belum selesai — remediation diperlukan**.
+Status teknis: **complete — menunggu keputusan Project Owner**.
 
 - [x] Deployment web/API sehat dan memakai source commit yang sama.
 - [x] Matriks visual staging 24/24 tersedia.
 - [x] Empat role dan Staff authorization smoke lulus.
-- [ ] Seluruh functional smoke staging lulus tanpa finding Medium terbuka.
-- [ ] Staging technical gate complete.
+- [x] Seluruh functional smoke staging lulus tanpa finding Medium terbuka.
+- [x] Staging technical gate complete.
 - [ ] Project Owner memberikan keputusan final staging.
 
-Finding penahan: `B2-NOT-STG-001` (Medium/Open), notification preference Customer tidak
-persisten setelah refetch/reload. Implementer tidak mencentang keputusan final Project
-Owner.
+`B2-NOT-STG-001` dan empat finding P1/P2 terkait telah Closed setelah full local gate,
+redeploy dari commit yang sama, dan targeted staging retest 31 Agustus 2026.
+Implementer tidak mencentang keputusan final Project Owner.

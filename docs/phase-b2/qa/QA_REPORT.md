@@ -5,7 +5,7 @@
 - Environment: MySQL 8 E2E `3308`, Redis `6380/1`, API `3102`, web `4175`
 - Scope: lokal terisolasi, regression B1 + fitur B2
 - Status lokal: **local readiness accepted; 43/43 complete-local**
-- Status staging: **technical gate belum selesai — 1 finding Medium terbuka**
+- Status staging: **technical gate complete — menunggu keputusan Project Owner**
 
 ## Hasil otomatis
 
@@ -14,9 +14,9 @@
 | Formatter                    | Lulus                                            |
 | ESLint                       | Lulus                                            |
 | TypeScript                   | Lulus                                            |
-| Unit frontend/backend/client | 47 + 54 + 2 lulus                                |
-| Integration                  | 34/34 lulus; targeted B2 11/11                   |
-| Security                     | 23/23 lulus                                      |
+| Unit frontend/backend/client | 49 + 55 + 2 lulus                                |
+| Integration                  | 37/37 lulus                                      |
+| Security                     | 25/25 lulus                                      |
 | Concurrency                  | 2/2 lulus; promo quota diuji dengan 50 request   |
 | OpenAPI contract             | Lulus                                            |
 | B2 Playwright empat role     | 4/4 lulus, termasuk regression dialog dan axe    |
@@ -103,3 +103,25 @@ preference email reminder gagal persisten setelah refetch/reload dan dicatat seb
 Project Owner, staging technical gate belum selesai.
 
 Evidence: `evidence/2026-08-30-b2-staging-readiness/`.
+
+## Remediasi P1/P2 dan targeted staging retest 31 Agustus 2026
+
+Remediasi promotion funding, tenant/venue isolation, tenant-scoped idempotency, serta
+notification preference telah lulus full `qa:b2:local`. Source commit
+`b74ab1390f3debb5ac2cc4a63c1949b680432c41` dideploy ke API
+`dpl_Gy4M9phJynEiPSpY7aNX22oET3hQ` (`sin1`) dan web
+`dpl_BmEcQsRF6s9qzLNBENfMzSqMdqvb`.
+
+- Forged business promo `PLATFORM` ditolak `422`; promo Owner valid mendapat `201`.
+- Staff demo hanya mempunyai satu assignment dan tidak mempunyai
+  `promotions.manage`; API serta direct UI promo ditolak `403`, tanpa disclosure data.
+- Preference email reminder menghasilkan PUT `204`, GET boolean `false`, dan tetap
+  nonaktif setelah dialog dibuka ulang serta reload. State demo dikembalikan ke awal.
+- Console Customer/Owner/Staff bersih; runtime API tidak mempunyai `5xx` atau error log.
+- Visual delta 12/12 lulus pada `360x800` dan `1440x900`, light/dark.
+
+Lima finding remediation berstatus Closed, termasuk `B2-NOT-STG-001`. Tidak ada
+Blocker/Critical/High/Medium baru. Status teknis staging sekarang complete dan menunggu
+keputusan final Project Owner.
+
+Evidence: `evidence/2026-08-31-b2-p1-p2-staging-retest/`.

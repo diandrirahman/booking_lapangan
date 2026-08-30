@@ -2,7 +2,7 @@
 
 Status: **LOCAL READINESS ACCEPTED — STAGING DIIZINKAN**
 
-Status staging: **TECHNICAL GATE INCOMPLETE — REMEDIATION REQUIRED**
+Status staging: **TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
 
 ## Readiness yang sudah terbukti
 
@@ -37,8 +37,13 @@ Staging teknis boleh dilanjutkan menggunakan commit yang lulus gate ini.
 - Deployment web/API sehat dan visual matrix 24/24 lulus.
 - Staff authorization, Admin read smoke, tiket/review Customer, promo sandbox, serta
   owner reply lulus.
-- `B2-NOT-STG-001` (Medium/Open): preference email reminder kembali aktif setelah
-  response/refetch dan reload.
+- `B2-NOT-STG-001` telah ditutup melalui typed boolean normalization, authoritative
+  refetch, dan targeted staging retest.
+- Promotion funding, venue isolation, serta tenant-scoped idempotency telah diremediasi
+  dan mempunyai regression test.
+- Targeted staging retest menunjukkan forged platform promo `422`, cross-scope Staff
+  `403`, preference tetap `false` setelah reload, console bersih, dan nol API `5xx`.
 
-Keputusan final staging belum dapat diminta sebelum finding tersebut diremediasi dan
-retest server-backed lulus. Keputusan local readiness sebelumnya tidak berubah.
+Seluruh technical acceptance staging telah terpenuhi. Keputusan final staging tetap
+harus diberikan Project Owner; implementer tidak mencentangnya. Keputusan local
+readiness sebelumnya tidak berubah.

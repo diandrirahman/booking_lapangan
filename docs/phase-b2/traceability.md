@@ -91,9 +91,12 @@ Project Owner. Dependency Medium tetap tercatat sebagai `Accepted Risk`.
 - `complete-local`: **43/43**, diterima Project Owner pada 30 Agustus 2026.
 - Scope staging dan provider live tidak dihitung dalam local readiness B2.
 
-## Catatan staging 30 Agustus 2026
+## Catatan staging 30–31 Agustus 2026
 
 Status `complete-local` 43/43 tidak berubah. Deployment dan visual matrix staging
-24/24 lulus, tetapi validasi staging `B2-NOT-001/B2-NOT-003` menemukan
-`B2-NOT-STG-001` Medium/Open: perubahan channel email reminder tidak persisten setelah
-refetch/reload. Staging technical gate tetap terbuka sampai remediation dan retest.
+24/24 lulus. Finding `B2-NOT-STG-001` dan empat finding promotion/notification hasil
+review P1/P2 telah diremediasi dengan regression test, full local gate, redeploy, dan
+targeted staging retest. Preference email reminder tetap `false` setelah GET, dialog
+dibuka ulang, dan reload; Staff promotion boundary menghasilkan `403`; forged platform
+promo menghasilkan `422`. Staging technical gate complete dan menunggu keputusan
+Project Owner.

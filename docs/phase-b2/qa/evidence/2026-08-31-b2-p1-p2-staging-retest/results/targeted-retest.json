@@ -1,0 +1,47 @@
+{
+  "date": "2026-08-31",
+  "sourceCommit": "b74ab1390f3debb5ac2cc4a63c1949b680432c41",
+  "deployments": {
+    "api": "dpl_Gy4M9phJynEiPSpY7aNX22oET3hQ",
+    "web": "dpl_BmEcQsRF6s9qzLNBENfMzSqMdqvb",
+    "apiRegion": "sin1"
+  },
+  "promotion": {
+    "forgedPlatformStatus": 422,
+    "ownerAssignedVenueCreateStatus": 201,
+    "ownerOtherVenueCreateStatus": 201,
+    "staffOtherVenueStatus": 403,
+    "staffListStatus": 403,
+    "staffListDisposition": "expected-rbac-no-promotions.manage",
+    "ownerVenueCount": 2,
+    "staffAssignedVenueCount": 1
+  },
+  "notificationPreference": {
+    "initialEnabled": true,
+    "disableStatus": 204,
+    "getStatus": 200,
+    "persistedValue": false,
+    "persistedValueType": "boolean",
+    "persistedAfterDialogReopen": true,
+    "persistedAfterReload": true,
+    "restoredToInitial": true
+  },
+  "console": {
+    "customerErrorsOrWarnings": 0,
+    "ownerErrorsOrWarnings": 0,
+    "staffErrorsOrWarnings": 0
+  },
+  "runtime": {
+    "api5xx": 0,
+    "apiErrorLogs": 0
+  },
+  "visual": {
+    "screenshots": 12,
+    "viewports": ["360x800", "1440x900"],
+    "themes": ["light", "dark"],
+    "actualViewportMatchesRequested": true,
+    "criticalClipping": false,
+    "horizontalOverflow": false
+  },
+  "status": "pass"
+}

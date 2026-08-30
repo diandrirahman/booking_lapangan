@@ -11,8 +11,9 @@
   chat sesuai batas scope.
 - Satu currency Rupiah; tidak ada tax engine, accounting integration, KYC, atau real
   payout account.
-- Google OIDC, Midtrans live, provider email, Vercel, TiDB, dan Tigris tidak termasuk
-  gate lokal B2.
+- Google OIDC live, Midtrans live, provider email, dan transfer payout nyata tidak
+  termasuk gate lokal atau targeted staging B2. Vercel/TiDB/Redis staging hanya diuji
+  pada integration boundary sandbox.
 - QA manual External Chrome dan matriks 24 screenshot telah selesai. Playwright/axe
   tetap dipakai sebagai bukti pendukung, bukan pengganti inspeksi manual.
 - `ExcelJS 4.4.0` membawa `uuid 8.3.2` dengan dua advisory Moderate untuk API UUID
@@ -20,6 +21,7 @@
   jalur dependency tersebut hanya memanggil `uuid.v4()` tanpa buffer. Tidak ada versi
   ExcelJS stabil yang menarik UUID aman, sedangkan `npm audit fix --force` menyarankan
   downgrade breaking. Gate otomatis tetap gagal untuk High/Critical. Project Owner
-  menerima finding ini sebagai `Accepted Risk` untuk Phase B2 lokal pada 30 Agustus 2026;
+  menerima finding ini sebagai `Accepted Risk` untuk Phase B2 lokal dan staging pada
+  30 Agustus 2026;
   review ulang dilakukan saat tersedia upgrade ExcelJS yang aman, penggunaan UUID
   berubah, atau sebelum keputusan deployment production.
