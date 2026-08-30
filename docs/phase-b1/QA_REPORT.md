@@ -2,7 +2,7 @@
 
 Tanggal pemeriksaan terakhir: 30 Agustus 2026.
 
-Status: **STAGING TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
+Status: **PHASE B1 DITERIMA — SELESAI**
 
 ## Matriks visual staging 30 Agustus 2026
 
@@ -128,8 +128,9 @@ Retest lima Medium: [`qa/evidence/2026-08-29-b1-medium-remediation-local/README.
 
 Matriks staging: [`qa/evidence/2026-08-30-b1-staging-visual-matrix/README.md`](qa/evidence/2026-08-30-b1-staging-visual-matrix/README.md).
 
-Project Owner menerima local sign-off melalui percakapan Codex pada 29 Agustus 2026.
-Implementer hanya mencatat keputusan tersebut. Gate teknis staging sudah lengkap; keputusan
-akhir staging tetap menunggu Project Owner.
+Project Owner menerima local sign-off melalui percakapan Codex pada 29 Agustus 2026 dan
+memberikan final staging sign-off `Diterima` pada 30 Agustus 2026. Implementer hanya
+mencatat keputusan eksplisit tersebut. Phase B1 dinyatakan selesai tanpa finding
+Blocker/Critical/High/Medium terbuka.
 
 Migration/cutover production tetap di luar Phase B1 dan memerlukan persetujuan terpisah.

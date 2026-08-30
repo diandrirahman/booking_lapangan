@@ -3,7 +3,7 @@
 - Tanggal pengujian: 29 Agustus 2026
 - Runtime QA: Node.js `v22.23.2`
 - Database canonical: MySQL 8
-- Status: **STAGING TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
+- Status: **PHASE B1 DITERIMA — SELESAI**
 
 ## Status gate staging 30 Agustus 2026
 
@@ -14,8 +14,8 @@ tercatat 231 ms, 236 ms, dan 210 ms setelah API dipindahkan dari `iad1` ke `sin1
 Google OIDC consent/callback penuh sudah lulus. Compatibility QA menemukan dan menutup
 session-switch saat identitas Google sudah tertaut ke user lain; deployment akhir menolak
 konflik `409` dan mempertahankan session Owner. Matriks visual staging empat role × empat
-breakpoint × dua tema juga sudah lulus 32/32. Gate teknis staging lengkap, tetapi keputusan
-akhir staging tetap milik Project Owner.
+breakpoint × dua tema juga sudah lulus 32/32. Project Owner memberikan final staging
+sign-off `Diterima` pada 30 Agustus 2026 sehingga Phase B1 dinyatakan selesai.
 
 Bukti: [`2026-08-30-b1-staging-compatibility`](evidence/2026-08-30-b1-staging-compatibility/README.md).
 
@@ -125,7 +125,7 @@ ditutup tanpa horizontal overflow, console error, API 5xx, atau axe serious/crit
 
 Seluruh requirement lokal berstatus `complete-local`. Project Owner memberikan keputusan
 `Diterima` melalui percakapan Codex pada 29 Agustus 2026. Implementer hanya mencatat
-keputusan tersebut; gate staging belum dijalankan.
+keputusan tersebut. Gate staging kemudian lulus dan diterima pada 30 Agustus 2026.
 
 Bukti lengkap dan screenshot ada pada
 [`2026-08-29-b1-manual-security-local`](evidence/2026-08-29-b1-manual-security-local/README.md).
@@ -136,5 +136,6 @@ Retest Medium ada pada
 Catatan keputusan tersedia pada [`PROJECT_OWNER_SIGNOFF.md`](PROJECT_OWNER_SIGNOFF.md).
 
 Vercel, TiDB, Tigris, Google OIDC live, Midtrans Sandbox, realtime staging, dan matriks
-visual staging sudah menyelesaikan gate teknis. Checklist keputusan akhir staging belum
-dicentang oleh implementer dan menunggu Project Owner.
+visual staging sudah menyelesaikan gate teknis. Project Owner memberikan keputusan akhir
+`Diterima` melalui percakapan Codex pada 30 Agustus 2026. Migration/cutover production
+dan pekerjaan Phase B2 berada di luar acceptance Phase B1.

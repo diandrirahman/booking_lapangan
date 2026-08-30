@@ -1,6 +1,6 @@
 # Project Owner Sign-off — Phase B1
 
-Status: **STAGING TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
+Status: **PHASE B1 DITERIMA — SELESAI**
 
 Keputusan di bawah berasal dari Project Owner. AI/implementer hanya mencatat persetujuan
 eksplisit tersebut dan tidak mengambil keputusan atas nama Project Owner.
@@ -52,19 +52,22 @@ Catatan implementer: Midtrans Sandbox dan Google OIDC consent/callback telah lul
 Konflik identitas Google ditolak `409` tanpa mengganti session lokal. Hasil teknis dan
 screenshot smoke ada di `evidence/2026-08-30-b1-staging-compatibility/`.
 Matriks visual External Chrome 32/32 lulus; screenshot dan hasil terstruktur ada di
-`evidence/2026-08-30-b1-staging-visual-matrix/`. Gate teknis staging lengkap, tetapi
-implementer tidak mencentang keputusan akhir staging atas nama Project Owner.
+`evidence/2026-08-30-b1-staging-visual-matrix/`. Gate teknis staging lengkap.
 
 ### Keputusan akhir staging
 
-- [ ] Diterima.
+- [x] Diterima.
 - [ ] Diterima dengan catatan non-blocking.
 - [ ] Ditolak; perbaikan wajib dilakukan.
 
-- Nama Project Owner: ______________________________
-- Tanggal: _________________________________________
+- Nama Project Owner: Tidak dicantumkan pada percakapan
+- Tanggal: 30 Agustus 2026
   Keputusan/catatan:
+
+Phase B1 diterima tanpa catatan blocking. Migration/cutover production dan pekerjaan
+Phase B2 tetap memerlukan scope serta persetujuan terpisah.
 
 ---
 
-Persetujuan tercatat: __________________________________________________________
+Persetujuan tercatat: pesan `Diterima` dari Project Owner melalui percakapan Codex
+pada 30 Agustus 2026.
