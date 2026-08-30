@@ -3,7 +3,7 @@
 - Tanggal pengujian: 29 Agustus 2026
 - Runtime QA: Node.js `v22.23.2`
 - Database canonical: MySQL 8
-- Status: **LOCAL SIGN-OFF DITERIMA — GATE STAGING BERJALAN**
+- Status: **STAGING TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
 
 ## Status gate staging 30 Agustus 2026
 
@@ -14,10 +14,25 @@ tercatat 231 ms, 236 ms, dan 210 ms setelah API dipindahkan dari `iad1` ke `sin1
 Google OIDC consent/callback penuh sudah lulus. Compatibility QA menemukan dan menutup
 session-switch saat identitas Google sudah tertaut ke user lain; deployment akhir menolak
 konflik `409` dan mempertahankan session Owner. Matriks visual staging empat role × empat
-breakpoint masih menunggu pelaksanaan, sehingga laporan ini belum menyatakan final staging
-sign-off.
+breakpoint × dua tema juga sudah lulus 32/32. Gate teknis staging lengkap, tetapi keputusan
+akhir staging tetap milik Project Owner.
 
 Bukti: [`2026-08-30-b1-staging-compatibility`](evidence/2026-08-30-b1-staging-compatibility/README.md).
+
+Bukti matriks: [`2026-08-30-b1-staging-visual-matrix`](evidence/2026-08-30-b1-staging-visual-matrix/README.md).
+
+## Matriks visual staging
+
+| Breakpoint | Customer | Owner | Staff | Admin |
+| ---------- | -------- | ----- | ----- | ----- |
+| 360×800    | Lulus    | Lulus | Lulus | Lulus |
+| 768×1024   | Lulus    | Lulus | Lulus | Lulus |
+| 1024×768   | Lulus    | Lulus | Lulus | Lulus |
+| 1440×900   | Lulus    | Lulus | Lulus | Lulus |
+
+External Chrome menghasilkan 32 screenshot light/dark. Tidak ditemukan horizontal
+overflow, elemen kritis terpotong, gambar rusak, console error/warning, atau API `5xx`.
+Deployment frontend/API tidak berubah selama QA dan navigasi Staff tetap terbatas.
 
 ## Environment
 
@@ -120,6 +135,6 @@ Retest Medium ada pada
 [`2026-08-29-b1-medium-remediation-local`](evidence/2026-08-29-b1-medium-remediation-local/README.md).
 Catatan keputusan tersedia pada [`PROJECT_OWNER_SIGNOFF.md`](PROJECT_OWNER_SIGNOFF.md).
 
-Vercel, TiDB, Tigris, Google OIDC live, dan realtime staging tidak menjadi blocker lokal.
-Semua itu dapat dijalankan sebagai pekerjaan gate staging berikutnya setelah instruksi
-terpisah dari Project Owner.
+Vercel, TiDB, Tigris, Google OIDC live, Midtrans Sandbox, realtime staging, dan matriks
+visual staging sudah menyelesaikan gate teknis. Checklist keputusan akhir staging belum
+dicentang oleh implementer dan menunggu Project Owner.

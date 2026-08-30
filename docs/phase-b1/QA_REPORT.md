@@ -2,7 +2,19 @@
 
 Tanggal pemeriksaan terakhir: 30 Agustus 2026.
 
-Status: **LOCAL SIGN-OFF DITERIMA / GATE STAGING BERJALAN**
+Status: **STAGING TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
+
+## Matriks visual staging 30 Agustus 2026
+
+- External Chrome empat role × empat breakpoint × light/dark selesai **32/32**.
+- Deployment tetap selama QA: web `dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A` dan API
+  `dpl_EWCSxNzQuzP5LifUSDVe1PXc1sH9`.
+- Seluruh viewport aktual sesuai target; heading/route role, tema, dan fokus keyboard lulus.
+- Tidak ditemukan horizontal overflow, elemen kritis terpotong, gambar rusak, console
+  error/warning, atau API `5xx` pada rentang QA.
+- Staff tetap hanya melihat navigasi operasional sesuai assignment.
+- Bukti ada di
+  [`2026-08-30-b1-staging-visual-matrix`](qa/evidence/2026-08-30-b1-staging-visual-matrix/README.md).
 
 ## Compatibility staging 30 Agustus 2026
 
@@ -114,7 +126,10 @@ Retest remediasi: [`qa/evidence/2026-08-29-b1-high-remediation-local/README.md`]
 
 Retest lima Medium: [`qa/evidence/2026-08-29-b1-medium-remediation-local/README.md`](qa/evidence/2026-08-29-b1-medium-remediation-local/README.md).
 
+Matriks staging: [`qa/evidence/2026-08-30-b1-staging-visual-matrix/README.md`](qa/evidence/2026-08-30-b1-staging-visual-matrix/README.md).
+
 Project Owner menerima local sign-off melalui percakapan Codex pada 29 Agustus 2026.
-Implementer hanya mencatat keputusan tersebut; deploy/staging belum dijalankan.
+Implementer hanya mencatat keputusan tersebut. Gate teknis staging sudah lengkap; keputusan
+akhir staging tetap menunggu Project Owner.
 
 Migration/cutover production tetap di luar Phase B1 dan memerlukan persetujuan terpisah.

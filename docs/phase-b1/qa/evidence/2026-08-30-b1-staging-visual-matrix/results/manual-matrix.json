@@ -1,0 +1,830 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "method": "External Chrome manual QA",
+  "startedAt": "2026-08-30T02:23:26.520Z",
+  "endedAt": "2026-08-30T02:37:58.357Z",
+  "deployments": {
+    "web": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+    "api": "dpl_EWCSxNzQuzP5LifUSDVe1PXc1sH9"
+  },
+  "summary": {
+    "total": 32,
+    "passed": 32,
+    "failed": 0
+  },
+  "staffNavigation": [
+    "Overview",
+    "Kalender Operasional",
+    "Daftar Booking",
+    "Booking Offline",
+    "Check-in",
+    "Outstanding Payment",
+    "Review",
+    "Tiket",
+    "Mabar di Venue",
+    "Notifikasi"
+  ],
+  "entries": [
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Temukan tempat mainmu",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Ringkasan operasional",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "actualViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "actualViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "actualViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "actualTheme": "light",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "deploymentId": "dpl_6eZqH1NzhAPvESFVZn1MtfPznb9A",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "actualViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "actualTheme": "dark",
+      "heading": "Kendali operasional LapanganGo",
+      "headingVisible": true,
+      "routeMatched": true,
+      "horizontalOverflow": false,
+      "focusVisible": true,
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "status": "pass"
+    }
+  ]
+}

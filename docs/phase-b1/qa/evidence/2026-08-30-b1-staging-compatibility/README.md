@@ -52,8 +52,8 @@ ke user yang sedang login. Regression security 20/20 lulus. Retest deployment
 `dpl_EWCSxNzQuzP5LifUSDVe1PXc1sH9` membuktikan callback konflik `409` dan browser tetap
 menampilkan session Owner Andika.
 
-## Batas yang belum ditutup
+## Matriks visual staging
 
-- Matriks visual staging empat role × empat breakpoint belum diulang. Matriks 32/32 lokal
-  tetap menjadi baseline visual; staging saat ini baru mendapat desktop compatibility
-  smoke.
+Matriks External Chrome empat role × empat breakpoint × light/dark sudah lulus 32/32.
+Bukti terpisah tersedia di
+[`../2026-08-30-b1-staging-visual-matrix`](../2026-08-30-b1-staging-visual-matrix/README.md).
