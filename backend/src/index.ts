@@ -16,6 +16,7 @@ import { PaymentService } from "./payment/application/PaymentService.js";
 import { RefundService } from "./payment/application/RefundService.js";
 import { createPaymentProvider } from "./payment/application/PaymentProvider.js";
 import { createPaymentRouter } from "./payment/http/paymentRouter.js";
+import { createRefundRouter } from "./payment/http/refundRouter.js";
 import { PricingService } from "./pricing/application/PricingService.js";
 import { createPricingRouter } from "./pricing/http/pricingRouter.js";
 import { MaintenanceJobs } from "./platform/jobs/MaintenanceJobs.js";
@@ -40,6 +41,12 @@ import { createVenueSetupRouter } from "./venue/setup/venueSetupRouter.js";
 import { ObjectStorageService } from "./venue/media/ObjectStorageService.js";
 import { createMediaRouter } from "./venue/media/mediaRouter.js";
 import { MediaService } from "./venue/media/MediaService.js";
+import { FinanceService } from "./finance/FinanceService.js";
+import { createFinanceRouter } from "./finance/financeRouter.js";
+import { ReviewService } from "./review/ReviewService.js";
+import { createReviewRouter } from "./review/reviewRouter.js";
+import { SupportService } from "./support/SupportService.js";
+import { createSupportRouter } from "./support/supportRouter.js";
 
 const environment = loadEnvironment();
 const database = createDatabaseConnection(environment);
@@ -60,9 +67,16 @@ const googleOidc = new GoogleOidcService(
 const authorization = new TenantAuthorizationService(database);
 const tenantService = new TenantService(database);
 const outboxPublisher = new OutboxPublisher(database, redis.client);
-const bookingService = new BookingService(database, async () => {
-  await outboxPublisher.publishPending();
-});
+const financeService = new FinanceService(database);
+const notificationService = new NotificationService(database);
+const bookingService = new BookingService(
+  database,
+  async () => {
+    await outboxPublisher.publishPending();
+  },
+  financeService,
+);
+const refundService = new RefundService(database, financeService, notificationService);
 const paymentService = new PaymentService(
   database,
   createPaymentProvider(environment),
@@ -70,8 +84,10 @@ const paymentService = new PaymentService(
   async () => {
     await outboxPublisher.publishPending();
   },
+  financeService,
+  refundService,
+  notificationService,
 );
-const refundService = new RefundService(database);
 const outboxPoller = new OutboxPoller(
   outboxPublisher,
   environment.OUTBOX_POLL_INTERVAL_MS,
@@ -87,6 +103,8 @@ const maintenanceJobs = new MaintenanceJobs(
   refundService,
   outboxPublisher,
   new MediaService(database, objectStorage),
+  financeService,
+  notificationService,
 );
 const app = createApp({
   environment,
@@ -95,18 +113,25 @@ const app = createApp({
   },
   routers: [
     createAuthRouter({ environment, service: authService, sessions, googleOidc }),
-    createNotificationRouter(new NotificationService(database)),
+    createNotificationRouter(notificationService, authorization),
     createTenantRouter(tenantService, authorization),
     createCatalogRouter(new CatalogService(database, environment.S3_PUBLIC_BASE_URL)),
     createAvailabilityRouter(new AvailabilityService(database)),
     createBookingRouter(bookingService, authorization, paymentService),
     createOperationsRouter(
-      new OperationsService(database, bookingService, async () => {
-        await outboxPublisher.publishPending();
-      }),
+      new OperationsService(
+        database,
+        bookingService,
+        async () => {
+          await outboxPublisher.publishPending();
+        },
+        refundService,
+        financeService,
+      ),
       authorization,
     ),
     createPaymentRouter(paymentService),
+    createRefundRouter(refundService, authorization),
     createPricingRouter(new PricingService(database), authorization),
     createVenueSetupRouter(
       new VenueSetupService(database, async () => {
@@ -120,6 +145,12 @@ const app = createApp({
     createJobsRouter(maintenanceJobs, environment),
     createAdminMasterRouter(new AdminMasterService(database), authorization),
     createAdminOperationsRouter(new AdminOperationsService(database), authorization),
+    createFinanceRouter(financeService, authorization),
+    createReviewRouter(new ReviewService(database), authorization),
+    createSupportRouter(
+      new SupportService(database, notificationService),
+      authorization,
+    ),
   ],
   sessionStore: sessions,
 });

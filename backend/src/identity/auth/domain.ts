@@ -9,6 +9,9 @@ export interface AuthenticatedUser {
 export interface MembershipSummary {
   tenantId: string;
   role: BusinessRole;
+  tenantRoleId: string | null;
+  tenantRoleName: string | null;
+  permissions: string[];
 }
 
 export interface AuthSessionView {

@@ -102,23 +102,12 @@ export function LoadingState({
       aria-busy="true"
       aria-live="polite"
     >
-      {variant === "page" ? (
-        <span className="loading-brand" aria-hidden="true">
-          <span className="loading-brand-ring" />
-          <span className="loading-brand-mark">LG</span>
-        </span>
-      ) : variant === "inline" ? (
+      {variant === "inline" ? (
         <span className="loading-pulse" aria-hidden="true" />
       ) : (
-        <span className="loading-skeleton" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
+        <span className="loading-ring" aria-hidden="true" />
       )}
-      <h2 className={variant === "page" ? "loading-shimmer-text" : undefined}>
-        {title}
-      </h2>
+      <h2>{title}</h2>
       <p>{description}</p>
     </div>
   );

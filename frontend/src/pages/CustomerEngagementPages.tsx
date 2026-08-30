@@ -29,6 +29,7 @@ import {
   Badge,
   Button,
   Card,
+  Dialog,
   EmptyState,
   Input,
   PageTitle,
@@ -38,6 +39,7 @@ import { usePrototype } from "../store/PrototypeStore";
 import { formatRupiah } from "../store/selectors";
 import { toNotificationPresentation } from "../domain/notificationPresentation";
 import { reviewPresentations } from "../data/reviewPresentations";
+import { NotificationPreferencesCard } from "./B2SettingsPages";
 
 type FavoriteFilter = "all" | "venue" | "mabar";
 type NotificationFilter = "all" | "unread";
@@ -421,9 +423,24 @@ export function NotificationsPage() {
             Belum dibaca <span>{unreadCount}</span>
           </button>
         </div>
-        <Link to="/profile">
-          <SlidersHorizontal /> Atur preferensi
-        </Link>
+        {serverStateEnabled ? (
+          <Dialog
+            title="Atur preferensi"
+            description="Notifikasi kritis tetap aktif; channel lain dapat disesuaikan."
+            contentClassName="notification-preferences-dialog"
+            trigger={
+              <Button variant="secondary">
+                <SlidersHorizontal /> Atur preferensi
+              </Button>
+            }
+          >
+            <NotificationPreferencesCard />
+          </Dialog>
+        ) : (
+          <Link to="/profile">
+            <SlidersHorizontal /> Atur preferensi
+          </Link>
+        )}
       </div>
       <ScenarioBoundary scenario={state.scenario} emptyTitle="Belum ada notifikasi">
         <section className="notification-feed" aria-label="Daftar notifikasi">

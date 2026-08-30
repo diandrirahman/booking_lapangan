@@ -10,10 +10,15 @@ describe("LoadingState", () => {
     ["panel", "Memuat data…"],
     ["inline", "Memuat slot…"],
   ] as const)("merender variant %s secara aksesibel", (variant, title) => {
-    render(<LoadingState variant={variant} title={title} />);
+    const { container } = render(<LoadingState variant={variant} title={title} />);
 
     expect(screen.getByRole("status")).toHaveAttribute("data-loading-variant", variant);
     expect(screen.getByRole("heading", { name: title })).toBeVisible();
+    expect(
+      container.querySelector(
+        variant === "inline" ? ".loading-pulse" : ".loading-ring",
+      ),
+    ).toBeInTheDocument();
   });
 });
 

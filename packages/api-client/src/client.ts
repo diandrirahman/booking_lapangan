@@ -6,12 +6,27 @@ export type VenuePage = components["schemas"]["VenuePage"];
 export type Booking = components["schemas"]["Booking"];
 export type CustomerBookingSummary = components["schemas"]["CustomerBookingSummary"];
 export type CreateBookingInput = components["schemas"]["CreateBookingInput"];
-export type SessionResponse = components["schemas"]["SessionResponse"];
+export type SessionResponse = Omit<
+  components["schemas"]["SessionResponse"],
+  "memberships"
+> & {
+  memberships: Array<
+    components["schemas"]["SessionResponse"]["memberships"][number] & {
+      tenantRoleId: string | null;
+      tenantRoleName: string | null;
+      permissions: string[];
+    }
+  >;
+};
 export type RegisterInput = components["schemas"]["RegisterInput"];
 export type AvailabilitySlot = components["schemas"]["AvailabilitySlot"];
 export type PaymentAttempt = components["schemas"]["PaymentAttempt"];
 export type Workspace = components["schemas"]["Workspace"];
-export type WorkspaceMember = components["schemas"]["WorkspaceMember"];
+export type WorkspaceMember = components["schemas"]["WorkspaceMember"] & {
+  tenantRoleId: string | null;
+  tenantRoleName: string | null;
+  permissions: string[];
+};
 export type SetupMasters = components["schemas"]["SetupMasters"];
 export type VenueSetupSummary = components["schemas"]["VenueSetupSummary"];
 export type VenueSetupDetail = components["schemas"]["VenueSetupDetail"];
@@ -74,6 +89,55 @@ export interface SignedUpload {
   storageKey: string;
   uploadUrl: string;
   expiresInSeconds: number;
+}
+
+export interface TenantRole {
+  id: string;
+  name: string;
+  templateCode: string | null;
+  immutable: boolean;
+  permissions: string[];
+}
+
+export interface FinanceSummary {
+  sandbox: true;
+  grossRevenue: number;
+  onlineRevenue: number;
+  offlineRevenue: number;
+  totalPaid: number;
+  balanceDue: number;
+  discounts: number;
+  commission: number;
+  refunds: number;
+  pendingBalance: number;
+  availableBalance: number;
+  paidOut: number;
+  netOwnerRevenue: number;
+  dpPaid: number;
+  cashRevenue: number;
+  gatewayFees: number;
+  heldBalance: number;
+  trends: Array<{ date: string; paid: number }>;
+  venueComparison: Array<{ venueId: string; name: string; paid: number }>;
+  courtComparison: Array<{
+    courtId: string;
+    name: string;
+    venueName: string;
+    paid: number;
+  }>;
+}
+
+export interface B2ListItem {
+  id: string;
+  status?: string;
+  name?: string;
+  code?: string | null;
+  title?: string;
+  subject?: string;
+  amount?: number;
+  totalAmount?: number;
+  createdAt?: string;
+  [key: string]: unknown;
 }
 
 export class ApiClientError extends Error {
@@ -221,7 +285,13 @@ export class LapanganGoApiClient {
   ): Promise<void> {
     return this.request(
       `/business/tenants/${encodeURIComponent(tenantId)}/staff/${encodeURIComponent(membershipId)}/assignments`,
-      { method: "PUT", body: JSON.stringify({ venueIds }) },
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          venueIds,
+          reason: "Memperbarui assignment venue staff",
+        }),
+      },
     );
   }
 
@@ -680,6 +750,334 @@ export class LapanganGoApiClient {
     });
   }
 
+  listRoleTemplates(): Promise<{ items: TenantRole[] }> {
+    return this.request("/business/role-templates");
+  }
+
+  listTenantRoles(tenantId: string): Promise<{ items: TenantRole[] }> {
+    return this.request(`/business/tenants/${encodeURIComponent(tenantId)}/roles`);
+  }
+
+  copyRoleTemplate(
+    tenantId: string,
+    templateId: string,
+    name: string,
+  ): Promise<{ id: string }> {
+    return this.request(`/business/tenants/${encodeURIComponent(tenantId)}/roles`, {
+      method: "POST",
+      body: JSON.stringify({
+        templateId,
+        name,
+        reason: "Menyalin template role untuk workspace",
+      }),
+    });
+  }
+
+  assignTenantRole(
+    tenantId: string,
+    membershipId: string,
+    roleId: string,
+  ): Promise<void> {
+    return this.request(
+      `/business/tenants/${encodeURIComponent(tenantId)}/staff/${encodeURIComponent(membershipId)}/role`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          roleId,
+          reason: "Memperbarui role operasional staff",
+        }),
+      },
+    );
+  }
+
+  getFinanceSummary(tenantId: string): Promise<FinanceSummary> {
+    return this.request(`/business/finance?${queryString({ tenantId })}`);
+  }
+
+  getFinanceSettings(tenantId: string): Promise<B2ListItem> {
+    return this.request(`/business/finance/settings?${queryString({ tenantId })}`);
+  }
+
+  updateFinanceSettings(input: {
+    tenantId: string;
+    manualPayoutEnabled: boolean;
+    payoutAccountLabel?: string | null;
+    payoutAccountLast4?: string | null;
+    reason: string;
+  }): Promise<void> {
+    return this.request("/business/finance/settings", {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  }
+
+  listFinanceLedger(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/finance/ledger?${queryString({ tenantId })}`);
+  }
+
+  listPayouts(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/finance/payouts?${queryString({ tenantId })}`);
+  }
+
+  createPayout(tenantId: string, idempotencyKey: string): Promise<B2ListItem> {
+    return this.request("/business/finance/payouts", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ tenantId }),
+    });
+  }
+
+  listBusinessPromotions(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/promotions?${queryString({ tenantId })}`);
+  }
+
+  createBusinessPromotion(input: Record<string, unknown>): Promise<B2ListItem> {
+    return this.request("/business/promotions", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify(input),
+    });
+  }
+
+  createAdminCommission(input: Record<string, unknown>): Promise<B2ListItem> {
+    return this.request("/admin/commission-configs", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify(input),
+    });
+  }
+
+  createAdminPromotion(input: Record<string, unknown>): Promise<B2ListItem> {
+    return this.request("/admin/promotions", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify(input),
+    });
+  }
+
+  listBusinessRefunds(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/refunds?${queryString({ tenantId })}`);
+  }
+
+  listBusinessReviews(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/reviews?${queryString({ tenantId })}`);
+  }
+
+  listBusinessSupport(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/support?${queryString({ tenantId })}`);
+  }
+
+  listCustomerSupport(): Promise<{ items: B2ListItem[] }> {
+    return this.request("/support/tickets");
+  }
+
+  listCancellationPolicies(): Promise<{ items: B2ListItem[] }> {
+    return this.request("/cancellation-policies");
+  }
+
+  createCancellationPolicy(input: {
+    name: string;
+    tiers: Array<{
+      minimumHoursBefore: number;
+      maximumHoursBefore?: number;
+      refundBasisPoints: number;
+    }>;
+  }): Promise<B2ListItem> {
+    return this.request("/admin/cancellation-policies", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  assignCancellationPolicy(
+    venueId: string,
+    tenantId: string,
+    templateId: string,
+    reason: string,
+  ): Promise<void> {
+    return this.request(
+      `/business/venues/${encodeURIComponent(venueId)}/cancellation-policy`,
+      { method: "PUT", body: JSON.stringify({ tenantId, templateId, reason }) },
+    );
+  }
+
+  listNotificationPreferences(): Promise<{ items: B2ListItem[] }> {
+    return this.request("/notifications/preferences");
+  }
+
+  updateNotificationPreference(
+    eventType: string,
+    channel: "IN_APP" | "EMAIL",
+    enabled: boolean,
+  ): Promise<void> {
+    return this.request("/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify({ eventType, channel, enabled }),
+    });
+  }
+
+  listReminderOptions(): Promise<{ items: B2ListItem[] }> {
+    return this.request("/notifications/reminder-options");
+  }
+
+  createReminderOption(minutesBefore: number): Promise<B2ListItem> {
+    return this.request("/admin/notification-reminder-options", {
+      method: "POST",
+      body: JSON.stringify({ minutesBefore }),
+    });
+  }
+
+  setVenueReminders(
+    venueId: string,
+    tenantId: string,
+    optionIds: string[],
+  ): Promise<void> {
+    return this.request(`/business/venues/${encodeURIComponent(venueId)}/reminders`, {
+      method: "PUT",
+      body: JSON.stringify({ tenantId, optionIds }),
+    });
+  }
+
+  replyToBusinessReview(
+    reviewId: string,
+    tenantId: string,
+    body: string,
+  ): Promise<void> {
+    return this.request(`/business/reviews/${encodeURIComponent(reviewId)}/reply`, {
+      method: "POST",
+      body: JSON.stringify({ tenantId, body }),
+    });
+  }
+
+  moderateReview(
+    reviewId: string,
+    status: "VISIBLE" | "HIDDEN",
+    reason: string,
+  ): Promise<void> {
+    return this.request(`/admin/reviews/${encodeURIComponent(reviewId)}/moderate`, {
+      method: "POST",
+      body: JSON.stringify({ status, reason }),
+    });
+  }
+
+  decideRefund(refundId: string, approved: boolean, reason: string): Promise<void> {
+    return this.request(`/admin/refunds/${encodeURIComponent(refundId)}/decision`, {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ approved, reason }),
+    });
+  }
+
+  updatePayout(
+    payoutId: string,
+    status: "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELLED",
+    reason: string,
+  ): Promise<void> {
+    return this.request(`/admin/payouts/${encodeURIComponent(payoutId)}`, {
+      method: "PATCH",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ status, reason }),
+    });
+  }
+
+  replyToBusinessSupport(
+    ticketId: string,
+    tenantId: string,
+    body: string,
+  ): Promise<void> {
+    return this.request(`/business/support/${encodeURIComponent(ticketId)}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ tenantId, body }),
+    });
+  }
+
+  updateSupportTicket(
+    ticketId: string,
+    input: {
+      status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+      resolution?: string;
+      assigneeUserId?: string;
+      reverseEarning?: boolean;
+    },
+  ): Promise<void> {
+    return this.request(`/admin/support/${encodeURIComponent(ticketId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  createSupportTicket(input: {
+    bookingReference?: string;
+    category: "BOOKING" | "PAYMENT" | "REFUND" | "VENUE" | "OTHER";
+    subject: string;
+    message: string;
+    transactionDispute: boolean;
+  }): Promise<B2ListItem> {
+    return this.request("/support/tickets", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  createReview(
+    bookingId: string,
+    input: {
+      rating: number;
+      cleanliness: number;
+      courtQuality: number;
+      facility: number;
+      service: number;
+      value: number;
+      comment: string;
+    },
+  ): Promise<{ id: string }> {
+    return this.request(`/bookings/${encodeURIComponent(bookingId)}/review`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  cancelBooking(
+    bookingId: string,
+    reason: string,
+    idempotencyKey: string,
+  ): Promise<B2ListItem> {
+    return this.request(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  rescheduleBooking(
+    bookingId: string,
+    newSlotIds: string[],
+    idempotencyKey: string,
+  ): Promise<void> {
+    return this.request(`/bookings/${encodeURIComponent(bookingId)}/reschedule`, {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ newSlotIds }),
+    });
+  }
+
+  listAdminB2(
+    resource:
+      | "commission-configs"
+      | "refunds"
+      | "support"
+      | "promotions"
+      | "payouts"
+      | "reviews"
+      | "finance/ledger",
+  ): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/admin/${resource}`);
+  }
+
+  listBusinessPayments(tenantId: string): Promise<{ items: B2ListItem[] }> {
+    return this.request(`/business/finance/payments?${queryString({ tenantId })}`);
+  }
+
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     if (init.body !== undefined) headers.set("content-type", "application/json");
@@ -691,7 +1089,9 @@ export class LapanganGoApiClient {
     });
     if (response.ok) {
       if (response.status === 204) return undefined as T;
-      return (await response.json()) as T;
+      const body = await response.text();
+      if (body.length === 0) return undefined as T;
+      return JSON.parse(body) as T;
     }
 
     const body = (await response.json()) as ApiErrorBody;

@@ -3,6 +3,7 @@ import { hash } from "argon2";
 import { eq } from "drizzle-orm";
 import { loadEnvironment } from "../config/environment.js";
 import { createDatabaseConnection, type DatabaseConnection } from "./client.js";
+import { formatPublicId } from "./ids.js";
 import {
   addonCourts,
   addons,
@@ -15,6 +16,7 @@ import {
   bookingIntervalOptions,
   bookingItems,
   bookingPaymentSummaries,
+  bookingFinancialSnapshots,
   bookingPriceLines,
   bookingQrTokens,
   bookingReschedules,
@@ -23,6 +25,9 @@ import {
   bookingSlotReservations,
   bookingStateTransitions,
   commandIdempotency,
+  commissionConfigs,
+  cancellationPolicyTemplates,
+  cancellationPolicyTiers,
   courtBlocks,
   courtBookingSettings,
   courts,
@@ -30,10 +35,13 @@ import {
   courtWeeklySchedules,
   facilities,
   inboxEvents,
+  ledgerEntries,
+  ledgerTransactions,
   mediaAssets,
   memberVenueAssignments,
   offlineBookingDetails,
   outboxEvents,
+  ownerEarnings,
   ownerVerificationCases,
   paymentAttempts,
   paymentMethodOptions,
@@ -41,11 +49,27 @@ import {
   platformAdmins,
   priceRules,
   promotionScopes,
+  promotionRedemptions,
   promotions,
   refunds,
   refundStateTransitions,
   scheduleExceptions,
   sports,
+  supportTicketMessages,
+  supportTickets,
+  reviews,
+  reviewReplies,
+  reviewReports,
+  notificationPreferences,
+  notificationDeliveries,
+  notificationReminderOptions,
+  venueReminderSettings,
+  payoutItems,
+  payoutBatches,
+  tenantFinanceSettings,
+  rolePermissions,
+  tenantRoles,
+  permissions,
   tenantMemberships,
   tenants,
   users,
@@ -54,12 +78,17 @@ import {
   venueMedia,
   venueOperatingHours,
   venuePaymentSettings,
+  venuePolicyAssignments,
   venuePublicationRequests,
   venueSearchMetrics,
   venueSports,
   venues,
   verificationDocuments,
 } from "./schema/index.js";
+import {
+  PERMISSION_CODES,
+  ROLE_TEMPLATES,
+} from "../tenant/authorization/permissions.js";
 
 type DatabaseTransaction = Parameters<
   Parameters<DatabaseConnection["db"]["transaction"]>[0]
@@ -234,6 +263,7 @@ try {
     await seedCatalog(transaction);
     await seedBookingHistory(transaction);
     await seedNotifications(transaction);
+    await seedB2(transaction);
   });
   console.info("Seed development selesai.");
   console.info("Owner: andika.pratama@lapangango.test");
@@ -247,6 +277,27 @@ async function clearDatabase(transaction: DatabaseTransaction): Promise<void> {
   await transaction.update(tenants).set({ primaryOwnerMembershipId: null });
 
   const childTables = [
+    supportTicketMessages,
+    supportTickets,
+    reviewReplies,
+    reviewReports,
+    reviews,
+    payoutItems,
+    payoutBatches,
+    ownerEarnings,
+    ledgerEntries,
+    ledgerTransactions,
+    bookingFinancialSnapshots,
+    commissionConfigs,
+    promotionRedemptions,
+    notificationDeliveries,
+    notificationPreferences,
+    venueReminderSettings,
+    notificationReminderOptions,
+    tenantFinanceSettings,
+    venuePolicyAssignments,
+    cancellationPolicyTiers,
+    cancellationPolicyTemplates,
     paymentProviderEvents,
     refundStateTransitions,
     refunds,
@@ -291,8 +342,11 @@ async function clearDatabase(transaction: DatabaseTransaction): Promise<void> {
     mediaAssets,
     auditLogs,
     memberVenueAssignments,
+    rolePermissions,
     platformAdmins,
     tenantMemberships,
+    tenantRoles,
+    permissions,
     venues,
     tenants,
     authIdentities,
@@ -702,6 +756,263 @@ async function seedNotifications(transaction: DatabaseTransaction): Promise<void
       createdAt: new Date("2026-08-27T11:00:00.000Z"),
     },
   ]);
+}
+
+async function seedB2(transaction: DatabaseTransaction): Promise<void> {
+  await transaction
+    .insert(permissions)
+    .values(
+      PERMISSION_CODES.map((code) => ({ code, label: code.replaceAll(".", " ") })),
+    );
+
+  for (const [templateIndex, template] of ROLE_TEMPLATES.entries()) {
+    const roleId = templateIndex + 1;
+    await transaction.insert(tenantRoles).values({
+      id: roleId,
+      tenantId: null,
+      name: template.name,
+      templateCode: template.code,
+      immutable: true,
+    });
+    await transaction
+      .insert(rolePermissions)
+      .values(
+        template.permissions.map((permissionCode) => ({ roleId, permissionCode })),
+      );
+  }
+  for (const tenant of tenantSeeds) {
+    for (const [templateIndex, template] of ROLE_TEMPLATES.entries()) {
+      const roleId = tenant.id * 100 + templateIndex + 1;
+      await transaction.insert(tenantRoles).values({
+        id: roleId,
+        tenantId: tenant.id,
+        name: template.name,
+      });
+      await transaction
+        .insert(rolePermissions)
+        .values(
+          template.permissions.map((permissionCode) => ({ roleId, permissionCode })),
+        );
+    }
+    await transaction.insert(rolePermissions).values({
+      roleId: tenant.id * 100 + 2,
+      permissionCode: "schedule.manage",
+    });
+  }
+  for (const [index] of staffNames.entries()) {
+    const tenantId = (index % 3) + 1;
+    // Akun Staff utama memakai salinan Operator Booking yang ditambah akses kalender;
+    // role lain tetap terwakili oleh akun Staff berikutnya.
+    const templateIndex = (index + 1) % ROLE_TEMPLATES.length;
+    await transaction
+      .update(tenantMemberships)
+      .set({
+        tenantRoleId: tenantId * 100 + templateIndex + 1,
+      })
+      .where(eq(tenantMemberships.id, 10 + index));
+  }
+
+  await transaction.insert(commissionConfigs).values({
+    id: 1,
+    tenantId: null,
+    rateBasisPoints: 800,
+    effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
+    trialDays: 30,
+    trialCompletedBookingLimit: 10,
+    gatewayFeeFunding: "OWNER",
+    gatewayFeeBasisPoints: 250,
+    reason: "Default sandbox Phase B2",
+    createdByUserId: 4,
+  });
+  await transaction.insert(tenantFinanceSettings).values(
+    tenantSeeds.map((tenant) => ({
+      tenantId: tenant.id,
+      minimumPayoutAmount: 100_000,
+      manualPayoutEnabled: true,
+      payoutAccountLabel: "Rekening sandbox",
+      payoutAccountLast4: `000${tenant.id}`,
+    })),
+  );
+
+  await transaction.insert(cancellationPolicyTemplates).values({
+    id: 1,
+    name: "Kebijakan standar LapanganGo",
+    createdByUserId: 4,
+  });
+  await transaction.insert(cancellationPolicyTiers).values([
+    {
+      templateId: 1,
+      minimumHoursBefore: 24,
+      maximumHoursBefore: null,
+      refundBasisPoints: 10_000,
+    },
+    {
+      templateId: 1,
+      minimumHoursBefore: 6,
+      maximumHoursBefore: 24,
+      refundBasisPoints: 5_000,
+    },
+    {
+      templateId: 1,
+      minimumHoursBefore: 0,
+      maximumHoursBefore: 6,
+      refundBasisPoints: 0,
+    },
+  ]);
+  await transaction
+    .insert(venuePolicyAssignments)
+    .values(venueSeeds.map((venue) => ({ venueId: venue.id, templateId: 1 })));
+  const policySnapshot = {
+    templateId: formatPublicId(1),
+    name: "Kebijakan standar LapanganGo",
+    tiers: [
+      { minimumHoursBefore: 24, maximumHoursBefore: null, refundBasisPoints: 10_000 },
+      { minimumHoursBefore: 6, maximumHoursBefore: 24, refundBasisPoints: 5_000 },
+      { minimumHoursBefore: 0, maximumHoursBefore: 6, refundBasisPoints: 0 },
+    ],
+  };
+  await transaction
+    .update(bookings)
+    .set({ cancellationPolicySnapshot: policySnapshot });
+
+  await transaction.insert(notificationReminderOptions).values([
+    { id: 1, minutesBefore: 1_440 },
+    { id: 2, minutesBefore: 120 },
+  ]);
+  await transaction.insert(venueReminderSettings).values(
+    venueSeeds.flatMap((venue) => [
+      { venueId: venue.id, reminderOptionId: 1 },
+      { venueId: venue.id, reminderOptionId: 2 },
+    ]),
+  );
+
+  await transaction.insert(promotions).values([
+    {
+      id: 2,
+      tenantId: 2,
+      code: "URBAN10",
+      name: "Diskon Urban 10%",
+      status: "ACTIVE",
+      startsAt: new Date("2026-08-01T00:00:00.000Z"),
+      endsAt: new Date("2026-12-31T16:59:59.000Z"),
+      discountType: "PERCENT",
+      discountValue: 1_000,
+      maximumDiscount: 50_000,
+      quota: 100,
+      perUserLimit: 1,
+      fundingSource: "OWNER",
+      discoveryOnly: false,
+    },
+    {
+      id: 3,
+      tenantId: null,
+      code: "WELCOME20",
+      name: "Promo platform 20%",
+      status: "ACTIVE",
+      startsAt: new Date("2026-08-01T00:00:00.000Z"),
+      endsAt: new Date("2026-12-31T16:59:59.000Z"),
+      discountType: "PERCENT",
+      discountValue: 2_000,
+      maximumDiscount: 75_000,
+      quota: 100,
+      perUserLimit: 1,
+      firstBookingOnly: true,
+      fundingSource: "PLATFORM",
+      budgetAmount: 5_000_000,
+      discoveryOnly: false,
+    },
+  ]);
+  await transaction.insert(promotionScopes).values([
+    {
+      id: 2,
+      promotionId: 2,
+      scopeType: "VENUE",
+      scopeReferenceId: 3,
+      includeExclude: "INCLUDE",
+    },
+    {
+      id: 3,
+      promotionId: 3,
+      scopeType: "SPORT",
+      scopeReferenceId: 1,
+      includeExclude: "INCLUDE",
+    },
+  ]);
+
+  const bookingRows = await transaction
+    .select({ booking: bookings, payment: bookingPaymentSummaries })
+    .from(bookings)
+    .innerJoin(
+      bookingPaymentSummaries,
+      eq(bookingPaymentSummaries.bookingId, bookings.id),
+    );
+  for (const { booking, payment } of bookingRows) {
+    const commission = Math.floor((booking.totalAmount * 800) / 10_000);
+    const ownerNet = booking.totalAmount - commission;
+    const snapshotRows = await transaction
+      .insert(bookingFinancialSnapshots)
+      .values({
+        bookingId: booking.id,
+        bookingVersion: booking.version,
+        commissionConfigId: 1,
+        paymentMode: booking.paymentMode,
+        reservationAmount: 0,
+        dpAmount: booking.paymentMode === "DP" ? Math.ceil(booking.totalAmount / 2) : 0,
+        courtSubtotal: booking.totalAmount,
+        addonSubtotal: 0,
+        commissionBase: booking.totalAmount,
+        commissionRateBasisPoints: 800,
+        platformCommission: commission,
+        ownerNet,
+      })
+      .$returningId();
+    const snapshot = snapshotRows[0];
+    if (!snapshot)
+      throw new Error("MySQL tidak mengembalikan ID financial snapshot seed.");
+    if (payment.totalPaid > 0) {
+      const paidOwnerNet = Math.floor(
+        (ownerNet * payment.totalPaid) / booking.totalAmount,
+      );
+      const paidCommission = payment.totalPaid - paidOwnerNet;
+      await transaction.insert(ledgerTransactions).values({
+        id: 10_000 + booking.id,
+        tenantId: booking.tenantId,
+        bookingId: booking.id,
+        kind: "PAYMENT_RECEIVED",
+        idempotencyKey: `seed-payment:${booking.id}`,
+        description: "Pembayaran sandbox seed",
+      });
+      await transaction.insert(ledgerEntries).values([
+        {
+          transactionId: 10_000 + booking.id,
+          accountCode: "SANDBOX_CASH",
+          debit: payment.totalPaid,
+          credit: 0,
+        },
+        {
+          transactionId: 10_000 + booking.id,
+          accountCode: "OWNER_PAYABLE",
+          debit: 0,
+          credit: paidOwnerNet,
+        },
+        {
+          transactionId: 10_000 + booking.id,
+          accountCode: "PLATFORM_COMMISSION_REVENUE",
+          debit: 0,
+          credit: paidCommission,
+        },
+      ]);
+      await transaction.insert(ownerEarnings).values({
+        tenantId: booking.tenantId,
+        bookingId: booking.id,
+        snapshotId: snapshot.id,
+        sourceKey: `booking:${booking.id}`,
+        amount: paidOwnerNet,
+        status: booking.status === "COMPLETED" ? "AVAILABLE" : "PENDING",
+        availableAt: booking.status === "COMPLETED" ? SEED_REFERENCE_DATE : null,
+      });
+    }
+  }
 }
 
 function bookingStatus(index: number): string {

@@ -1,5 +1,13 @@
 import * as Popover from "@radix-ui/react-popover";
-import { BriefcaseBusiness, ChevronDown, Link2, LogOut, UserRound } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  ChevronDown,
+  LifeBuoy,
+  Link2,
+  LogOut,
+  Star,
+  UserRound,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCreateTenant } from "../api/businessQueries";
@@ -17,6 +25,7 @@ export function AccountMenu() {
   const createTenant = useCreateTenant();
   const googleLink = useStartGoogleAccountLink();
   const navigate = useNavigate();
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
   const [linkPassword, setLinkPassword] = useState("");
 
@@ -67,6 +76,7 @@ export function AccountMenu() {
   async function openBusinessWorkspace() {
     const workspace = await createTenant.mutateAsync(workspaceName.trim());
     setWorkspaceName("");
+    setAccountMenuOpen(false);
     navigate(`/business/${workspace.tenantId}/overview`);
   }
 
@@ -77,7 +87,7 @@ export function AccountMenu() {
   }
 
   return (
-    <Popover.Root>
+    <Popover.Root open={accountMenuOpen} onOpenChange={setAccountMenuOpen}>
       <Popover.Trigger className="account-trigger" aria-label="Buka menu akun">
         <span className="account-avatar" aria-hidden="true">
           {initials(user.name)}
@@ -98,8 +108,14 @@ export function AccountMenu() {
             </span>
           </div>
           <nav aria-label="Menu akun">
-            <Link to="/profile">
+            <Link to="/profile" onClick={() => setAccountMenuOpen(false)}>
               <UserRound /> Profil dan pengaturan
+            </Link>
+            <Link to="/reviews" onClick={() => setAccountMenuOpen(false)}>
+              <Star /> Review Saya
+            </Link>
+            <Link to="/support" onClick={() => setAccountMenuOpen(false)}>
+              <LifeBuoy /> Pusat Bantuan
             </Link>
             <Dialog
               title="Tautkan akun Google"
@@ -154,7 +170,10 @@ export function AccountMenu() {
               </div>
             </Dialog>
             {workspace && (
-              <Link to={`/business/${workspace.tenantId}/overview`}>
+              <Link
+                to={`/business/${workspace.tenantId}/overview`}
+                onClick={() => setAccountMenuOpen(false)}
+              >
                 <BriefcaseBusiness /> Workspace bisnis
               </Link>
             )}

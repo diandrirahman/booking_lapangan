@@ -1,0 +1,50 @@
+{
+  "runId": "2026-08-30-b2-ui-refresh-local",
+  "environment": "local",
+  "browser": "External Chrome",
+  "baseUrl": "http://127.0.0.1:4175",
+  "apiUrl": "http://127.0.0.1:3102",
+  "screenshotCount": 87,
+  "viewports": [
+    { "width": 360, "height": 800 },
+    { "width": 1440, "height": 900 }
+  ],
+  "roles": {
+    "customer": ["bookings", "support", "reviews", "notifications"],
+    "owner": [
+      "finance",
+      "transactions",
+      "refunds",
+      "ledger",
+      "payouts",
+      "promotions",
+      "reviews",
+      "support",
+      "notifications",
+      "team"
+    ],
+    "staff": ["overview", "finance-forbidden"],
+    "admin": [
+      "notification-config",
+      "commissions",
+      "promotions",
+      "refunds",
+      "finance",
+      "payouts",
+      "reviews",
+      "support"
+    ]
+  },
+  "checks": {
+    "viewportDimensions": "pass",
+    "lightDark": "pass",
+    "horizontalOverflow": "pass",
+    "criticalClipping": "pass",
+    "serverBackedState": "pass",
+    "staffFinanceForbidden": "pass",
+    "consoleErrors": 0,
+    "consoleWarnings": 0,
+    "api5xx": 0
+  },
+  "status": "pass"
+}

@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
 import {
   datetime,
+  foreignKey,
   index,
   int,
   json,
   mysqlTable,
+  primaryKey,
   smallint,
   text,
   uniqueIndex,
@@ -20,7 +22,9 @@ export const userNotifications = mysqlTable(
     userId: bigReference("user_id")
       .notNull()
       .references(() => users.id),
-    kind: varchar("kind", { length: 20 }).notNull(),
+    eventId: varchar("event_id", { length: 100 }),
+    kind: varchar("kind", { length: 64 }).notNull(),
+    critical: int("critical", { unsigned: true }).notNull().default(0),
     title: varchar("title", { length: 80 }).notNull(),
     body: varchar("body", { length: 240 }).notNull(),
     actionPath: varchar("action_path", { length: 180 }).notNull(),
@@ -29,7 +33,10 @@ export const userNotifications = mysqlTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP(3)`),
   },
-  (table) => [index("user_notifications_feed_idx").on(table.userId, table.createdAt)],
+  (table) => [
+    index("user_notifications_feed_idx").on(table.userId, table.createdAt),
+    uniqueIndex("user_notifications_event_unique").on(table.userId, table.eventId),
+  ],
 );
 
 export const commandIdempotency = mysqlTable(
@@ -62,6 +69,7 @@ export const outboxEvents = mysqlTable(
   {
     id: bigId(),
     tenantId: entityReference("tenant_id").references(() => tenants.id),
+    audienceUserId: bigReference("audience_user_id").references(() => users.id),
     eventType: varchar("event_type", { length: 80 }).notNull(),
     resourceType: varchar("resource_type", { length: 40 }).notNull(),
     resourceId: bigReference("resource_id").notNull(),
@@ -76,6 +84,73 @@ export const outboxEvents = mysqlTable(
       .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (table) => [index("outbox_pending_idx").on(table.processedAt, table.createdAt)],
+);
+
+export const notificationPreferences = mysqlTable(
+  "notification_preferences",
+  {
+    userId: bigReference("user_id")
+      .notNull()
+      .references(() => users.id),
+    eventType: varchar("event_type", { length: 60 }).notNull(),
+    channel: varchar("channel", { length: 12 }).notNull(),
+    enabled: int("enabled", { unsigned: true }).notNull().default(1),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.eventType, table.channel] })],
+);
+
+export const notificationDeliveries = mysqlTable(
+  "notification_deliveries",
+  {
+    id: bigId(),
+    eventId: varchar("event_id", { length: 100 }).notNull(),
+    userId: bigReference("user_id")
+      .notNull()
+      .references(() => users.id),
+    channel: varchar("channel", { length: 12 }).notNull(),
+    status: varchar("status", { length: 16 }).notNull(),
+    subject: varchar("subject", { length: 120 }).notNull(),
+    body: text("body").notNull(),
+    actionPath: varchar("action_path", { length: 180 }),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    uniqueIndex("notification_delivery_event_unique").on(
+      table.eventId,
+      table.userId,
+      table.channel,
+    ),
+  ],
+);
+
+export const notificationReminderOptions = mysqlTable(
+  "notification_reminder_options",
+  {
+    id: bigId(),
+    minutesBefore: int("minutes_before", { unsigned: true }).notNull(),
+    active: int("active", { unsigned: true }).notNull().default(1),
+  },
+  (table) => [
+    uniqueIndex("notification_reminder_minutes_unique").on(table.minutesBefore),
+  ],
+);
+
+export const venueReminderSettings = mysqlTable(
+  "venue_reminder_settings",
+  {
+    venueId: entityReference("venue_id").notNull(),
+    reminderOptionId: bigReference("reminder_option_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.venueId, table.reminderOptionId] }),
+    foreignKey({
+      name: "venue_reminder_option_fk",
+      columns: [table.reminderOptionId],
+      foreignColumns: [notificationReminderOptions.id],
+    }),
+  ],
 );
 
 export const inboxEvents = mysqlTable(

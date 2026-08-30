@@ -9,6 +9,8 @@ import type { PaymentService } from "../../payment/application/PaymentService.js
 import type { RefundService } from "../../payment/application/RefundService.js";
 import { ApiError } from "../../http/ApiError.js";
 import type { MediaService } from "../../venue/media/MediaService.js";
+import type { FinanceService } from "../../finance/FinanceService.js";
+import type { NotificationService } from "../../identity/notifications/NotificationService.js";
 
 const JOB_LOCK_SECONDS = 55;
 
@@ -21,6 +23,8 @@ export class MaintenanceJobs {
     private readonly refundService: RefundService,
     private readonly outboxPublisher: OutboxPublisher,
     private readonly mediaService: MediaService,
+    private readonly financeService: FinanceService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async run(): Promise<{
@@ -31,6 +35,10 @@ export class MaintenanceJobs {
     refunded: number;
     balanceCancelled: number;
     orphanUploadsDeleted: number;
+    earningsReleased: number;
+    remindersCaptured: number;
+    rescheduleAdjustmentsExpired: number;
+    weeklyPayoutsCreated: number;
   }> {
     const lockToken = `${process.pid}:${Date.now()}`;
     let acquired: unknown;
@@ -59,6 +67,10 @@ export class MaintenanceJobs {
         published: 0,
         failed: 0,
         orphanUploadsDeleted: 0,
+        earningsReleased: 0,
+        remindersCaptured: 0,
+        rescheduleAdjustmentsExpired: 0,
+        weeklyPayoutsCreated: 0,
       };
 
     try {
@@ -67,12 +79,21 @@ export class MaintenanceJobs {
       const refunded = await this.refundService.completePendingBatch();
       const publishResult = await this.outboxPublisher.publishPending();
       const orphanUploadsDeleted = await this.mediaService.cleanupOrphanUploads();
+      const earningsReleased = await this.financeService.releaseAvailableEarnings();
+      const remindersCaptured = await this.notificationService.captureDueReminders();
+      const rescheduleAdjustmentsExpired =
+        await this.paymentService.expireRescheduleAdjustments();
+      const weeklyPayoutsCreated = await this.financeService.createWeeklyPayouts();
       return {
         skipped: false,
         expired,
         refunded,
         balanceCancelled,
         orphanUploadsDeleted,
+        earningsReleased,
+        remindersCaptured,
+        rescheduleAdjustmentsExpired,
+        weeklyPayoutsCreated,
         ...publishResult,
       };
     } finally {

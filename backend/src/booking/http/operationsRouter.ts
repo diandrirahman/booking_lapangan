@@ -38,18 +38,33 @@ export function createOperationsRouter(
   authorization: TenantAuthorizationService,
 ): Router {
   const router = Router();
+  router.post(
+    "/bookings/:bookingId/reschedule",
+    requireSession,
+    asyncHandler(async (request, response) => {
+      const input = z
+        .object({ newSlotIds: z.array(publicIdSchema).min(1).max(6) })
+        .parse(request.body);
+      await service.rescheduleCustomer(
+        bookingReferenceSchema.parse(request.params.bookingId),
+        input.newSlotIds,
+        request.auth!.userId,
+        requireIdempotencyKey(request.header("Idempotency-Key")),
+      );
+      response.status(204).end();
+    }),
+  );
   router.get(
     "/business/dashboard",
     requireSession,
     asyncHandler(async (request, response) => {
       const input = optionalVenueQuerySchema.parse(request.query);
-      const access = input.venueId
-        ? await authorization.requireVenueAccess(
-            request.auth!.userId,
-            input.tenantId,
-            input.venueId,
-          )
-        : await authorization.requireTenantAccess(request.auth!.userId, input.tenantId);
+      const access = await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "operations.view",
+        input.venueId,
+      );
       response.json(
         await service.dashboard(
           input.tenantId,
@@ -63,13 +78,12 @@ export function createOperationsRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = bookingListQuerySchema.parse(request.query);
-      const access = input.venueId
-        ? await authorization.requireVenueAccess(
-            request.auth!.userId,
-            input.tenantId,
-            input.venueId,
-          )
-        : await authorization.requireTenantAccess(request.auth!.userId, input.tenantId);
+      const access = await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        input.outstandingOnly ? "payments.manage" : "bookings.manage",
+        input.venueId,
+      );
       response.json({
         items: await service.listBookings({
           ...input,
@@ -83,13 +97,12 @@ export function createOperationsRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = calendarQuerySchema.parse(request.query);
-      const access = input.venueId
-        ? await authorization.requireVenueAccess(
-            request.auth!.userId,
-            input.tenantId,
-            input.venueId,
-          )
-        : await authorization.requireTenantAccess(request.auth!.userId, input.tenantId);
+      const access = await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "schedule.manage",
+        input.venueId,
+      );
       response.json(
         await service.listCalendar({
           ...input,
@@ -111,10 +124,10 @@ export function createOperationsRouter(
           reason: z.string().trim().min(5).max(500),
         })
         .parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "schedule.manage",
         input.venueId,
       );
       response.status(201).json(await service.createClosure(input));
@@ -127,9 +140,10 @@ export function createOperationsRouter(
       const input = scopeSchema
         .extend({ reason: z.string().trim().min(5).max(500) })
         .parse(request.body);
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "bookings.manage",
         input.venueId,
       );
       const bookingReference = bookingReferenceSchema.parse(request.params.bookingId);
@@ -156,9 +170,10 @@ export function createOperationsRouter(
           reason: z.string().trim().min(5).max(500),
         })
         .parse(request.body);
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "bookings.manage",
         input.venueId,
       );
       const bookingReference = bookingReferenceSchema.parse(request.params.bookingId);
@@ -172,6 +187,8 @@ export function createOperationsRouter(
         input.newSlotIds,
         request.auth!.userId,
         input.reason,
+        new Date(),
+        requireIdempotencyKey(request.header("Idempotency-Key")),
       );
       response.status(204).end();
     }),
@@ -186,9 +203,10 @@ export function createOperationsRouter(
           reason: z.string().trim().max(500).optional(),
         })
         .parse(request.body);
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "attendance.manage",
         input.venueId,
       );
       const bookingReference = bookingReferenceSchema.parse(request.params.bookingId);
@@ -219,9 +237,10 @@ export function createOperationsRouter(
           "Header Idempotency-Key wajib diisi.",
         );
       }
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "payments.manage",
         input.venueId,
       );
       const bookingReference = bookingReferenceSchema.parse(request.params.bookingId);
@@ -242,4 +261,15 @@ export function createOperationsRouter(
     }),
   );
   return router;
+}
+
+function requireIdempotencyKey(value: string | undefined): string {
+  if (!value || value.length > 100) {
+    throw new ApiError(
+      400,
+      "IDEMPOTENCY_KEY_REQUIRED",
+      "Header Idempotency-Key wajib diisi.",
+    );
+  }
+  return value;
 }

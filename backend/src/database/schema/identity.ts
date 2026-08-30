@@ -79,6 +79,45 @@ export const tenants = mysqlTable(
   (table) => [uniqueIndex("tenants_slug_unique").on(table.slug)],
 );
 
+export const tenantRoles = mysqlTable(
+  "tenant_roles",
+  {
+    id: bigId(),
+    tenantId: entityReference("tenant_id").references(() => tenants.id),
+    name: varchar("name", { length: 50 }).notNull(),
+    templateCode: varchar("template_code", { length: 32 }),
+    immutable: boolean("immutable").notNull().default(false),
+    createdAt: datetime("created_at", { mode: "date" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: datetime("updated_at", { mode: "date" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("tenant_roles_tenant_name_unique").on(table.tenantId, table.name),
+    uniqueIndex("tenant_roles_template_code_unique").on(table.templateCode),
+  ],
+);
+
+export const permissions = mysqlTable("permissions", {
+  code: varchar("code", { length: 40 }).primaryKey(),
+  label: varchar("label", { length: 80 }).notNull(),
+});
+
+export const rolePermissions = mysqlTable(
+  "role_permissions",
+  {
+    roleId: bigReference("role_id")
+      .notNull()
+      .references(() => tenantRoles.id),
+    permissionCode: varchar("permission_code", { length: 40 })
+      .notNull()
+      .references(() => permissions.code),
+  },
+  (table) => [primaryKey({ columns: [table.roleId, table.permissionCode] })],
+);
+
 export const tenantMemberships = mysqlTable(
   "tenant_memberships",
   {
@@ -90,6 +129,7 @@ export const tenantMemberships = mysqlTable(
       .notNull()
       .references(() => users.id),
     role: varchar("role", { length: 20 }).notNull(),
+    tenantRoleId: bigReference("tenant_role_id").references(() => tenantRoles.id),
     status: varchar("status", { length: 20 }).notNull().default("ACTIVE"),
     createdAt: datetime("created_at", { mode: "date" })
       .notNull()

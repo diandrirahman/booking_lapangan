@@ -1,9 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DatabaseConnection } from "../../database/client.js";
 import { formatPublicId, parsePublicId } from "../../database/ids.js";
 import {
   platformAdmins,
+  rolePermissions,
   tenantMemberships,
+  tenantRoles,
   users,
 } from "../../database/schema/index.js";
 import type {
@@ -67,17 +69,41 @@ export class DrizzleAuthRepository implements AuthRepository {
 
   async listMemberships(userId: string): Promise<MembershipSummary[]> {
     const results = await this.database
-      .select({ tenantId: tenantMemberships.tenantId, role: tenantMemberships.role })
+      .select({
+        tenantId: tenantMemberships.tenantId,
+        role: tenantMemberships.role,
+        tenantRoleId: tenantMemberships.tenantRoleId,
+        tenantRoleName: tenantRoles.name,
+      })
       .from(tenantMemberships)
+      .leftJoin(tenantRoles, eq(tenantRoles.id, tenantMemberships.tenantRoleId))
       .where(
         and(
           eq(tenantMemberships.userId, parsePublicId(userId)),
           eq(tenantMemberships.status, "ACTIVE"),
         ),
       );
+    const roleIds = results.flatMap((membership) =>
+      membership.tenantRoleId === null ? [] : [membership.tenantRoleId],
+    );
+    const assignedPermissions =
+      roleIds.length === 0
+        ? []
+        : await this.database
+            .select()
+            .from(rolePermissions)
+            .where(inArray(rolePermissions.roleId, roleIds));
     return results.map((membership) => ({
       tenantId: formatPublicId(membership.tenantId),
       role: toBusinessRole(membership.role),
+      tenantRoleId:
+        membership.tenantRoleId === null
+          ? null
+          : formatPublicId(membership.tenantRoleId),
+      tenantRoleName: membership.tenantRoleName,
+      permissions: assignedPermissions
+        .filter((permission) => permission.roleId === membership.tenantRoleId)
+        .map((permission) => permission.permissionCode),
     }));
   }
 

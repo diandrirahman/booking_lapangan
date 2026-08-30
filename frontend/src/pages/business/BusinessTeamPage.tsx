@@ -8,6 +8,11 @@ import {
   useUpdateStaffAssignments,
   useWorkspaceMembers,
 } from "../../api/businessQueries";
+import {
+  useAssignTenantRole,
+  useRoleTemplates,
+  useTenantRoles,
+} from "../../api/b2Queries";
 import { SelectField } from "../../components/SelectField";
 import {
   Badge,
@@ -16,6 +21,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  LoadingState,
   PageTitle,
 } from "../../components/ui";
 
@@ -26,6 +32,9 @@ export function BusinessTeamPage() {
   const addMember = useAddWorkspaceMember(tenant ?? "");
   const assignments = useUpdateStaffAssignments(tenant ?? "");
   const transfer = useTransferPrimaryOwner(tenant ?? "");
+  const roleTemplates = useRoleTemplates();
+  const tenantRoles = useTenantRoles(tenant);
+  const assignRole = useAssignTenantRole(tenant ?? "");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"OWNER" | "STAFF">("STAFF");
   const [transferReason, setTransferReason] = useState("");
@@ -37,14 +46,21 @@ export function BusinessTeamPage() {
         description="Pilih workspace dari menu akun."
       />
     );
-  if (!members.data || !venues.data) {
-    return members.isError || venues.isError ? (
+  if (!members.data || !venues.data || !tenantRoles.data || !roleTemplates.data) {
+    return members.isError ||
+      venues.isError ||
+      tenantRoles.isError ||
+      roleTemplates.isError ? (
       <EmptyState
         title="Tim belum dapat dimuat"
         description="Periksa koneksi API lalu coba lagi."
       />
     ) : (
-      <Card aria-busy="true">Memuat anggota tim...</Card>
+      <LoadingState
+        title="Memuat anggota tim…"
+        description="Menyiapkan role, permission, dan assignment venue."
+        variant="panel"
+      />
     );
   }
 
@@ -141,6 +157,29 @@ export function BusinessTeamPage() {
             {member.role === "STAFF" && (
               <fieldset className="team-access-list">
                 <legend>Venue yang dapat diakses</legend>
+                <label>
+                  Role operasional
+                  <SelectField
+                    ariaLabel={`Role ${member.name}`}
+                    value={member.tenantRoleId ?? ""}
+                    options={tenantRoles.data.items.map((tenantRole) => ({
+                      value: tenantRole.id,
+                      label: tenantRole.name,
+                    }))}
+                    onValueChange={(roleId) =>
+                      assignRole.mutate({ membershipId: member.membershipId, roleId })
+                    }
+                  />
+                </label>
+                {member.permissions.length > 0 && (
+                  <div className="team-permission-list" aria-label="Permission aktif">
+                    {member.permissions.map((permission) => (
+                      <Badge key={permission} tone="neutral">
+                        {permission}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 <p>Pilih venue yang boleh dikelola oleh Staff ini.</p>
                 {venues.data.items.map((venue) => (
                   <label className="team-access-option" key={venue.id}>

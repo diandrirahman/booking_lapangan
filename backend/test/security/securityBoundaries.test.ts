@@ -164,7 +164,7 @@ describe("security boundaries", () => {
   });
 
   it("menolak Customer sebelum membuat signed URL venue", async () => {
-    const requireOwner = vi
+    const requirePermission = vi
       .fn()
       .mockRejectedValue(new ApiError(403, "OWNER_REQUIRED", "Owner diperlukan."));
     const createVenueUpload = vi.fn();
@@ -183,7 +183,7 @@ describe("security boundaries", () => {
       routers: [
         createMediaRouter(
           { createVenueUpload } as unknown as MediaService,
-          { requireOwner } as unknown as TenantAuthorizationService,
+          { requirePermission } as unknown as TenantAuthorizationService,
         ),
       ],
     });

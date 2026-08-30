@@ -37,7 +37,12 @@ export function createMediaRouter(
     asyncHandler(async (request, response) => {
       const venueId = publicIdSchema.parse(request.params.venueId);
       const input = uploadSchema.parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "venues.manage",
+        venueId,
+      );
       response.status(201).json(
         await mediaService.createVenueUpload(request.auth!.userId, {
           ...input,
@@ -65,7 +70,12 @@ export function createMediaRouter(
           purpose: z.enum(["COVER", "GALLERY"]),
         })
         .parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "venues.manage",
+        venueId,
+      );
       response.status(201).json(
         await mediaService.completeVenueUpload(request.auth!.userId, {
           ...input,

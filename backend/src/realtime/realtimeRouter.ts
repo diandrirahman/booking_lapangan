@@ -68,10 +68,14 @@ export function createRealtimeRouter(
       subscriber.on("message", (_channel, rawEvent) => {
         const event = parseRealtimeEvent(rawEvent);
         if (!event) return;
-        // An unscoped customer connection receives only the ready signal until
-        // customer-specific subscriptions are introduced. Never broadcast a
-        // tenant event merely because a user has a valid session.
-        if (!platformScope && (!tenantId || event.tenantId !== tenantId)) return;
+        if (
+          !canReceiveRealtimeEvent(event, {
+            userId: request.auth!.userId,
+            tenantId,
+            platformScope,
+          })
+        )
+          return;
         response.write(
           `id: ${event.id}\nevent: ${event.eventType}\ndata: ${JSON.stringify(event)}\n\n`,
         );
@@ -80,6 +84,19 @@ export function createRealtimeRouter(
     }),
   );
   return router;
+}
+
+export function canReceiveRealtimeEvent(
+  event: RealtimeEvent,
+  scope: {
+    userId: string;
+    tenantId?: string | undefined;
+    platformScope: boolean;
+  },
+): boolean {
+  if (scope.platformScope) return true;
+  if (scope.tenantId) return event.tenantId === scope.tenantId;
+  return event.audienceUserId === scope.userId;
 }
 
 function parseRealtimeEvent(value: string): RealtimeEvent | null {

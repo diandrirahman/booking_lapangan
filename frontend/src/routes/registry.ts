@@ -5,6 +5,7 @@ export interface RouteDefinition {
   section: string;
   shell: Shell;
   staff?: "allow" | "forbidden";
+  permission?: string;
 }
 
 const customer = [
@@ -29,54 +30,143 @@ const customer = [
   ["/profile", "Profil dan Pengaturan", "Akun"],
 ] as const;
 const business = [
-  ["/business/:tenant/overview", "Overview", "Beranda", "allow"],
+  ["/business/:tenant/overview", "Overview", "Beranda", "allow", "operations.view"],
   [
     "/business/:tenant/operations/calendar",
     "Kalender Operasional",
     "Operasional",
     "allow",
+    "schedule.manage",
   ],
-  ["/business/:tenant/operations/bookings", "Daftar Booking", "Operasional", "allow"],
+  [
+    "/business/:tenant/operations/bookings",
+    "Daftar Booking",
+    "Operasional",
+    "allow",
+    "bookings.manage",
+  ],
   [
     "/business/:tenant/operations/bookings/new-offline",
     "Booking Offline",
     "Operasional",
     "allow",
+    "bookings.manage",
   ],
-  ["/business/:tenant/operations/check-in", "Check-in", "Operasional", "allow"],
+  [
+    "/business/:tenant/operations/check-in",
+    "Check-in",
+    "Operasional",
+    "allow",
+    "attendance.manage",
+  ],
   [
     "/business/:tenant/operations/outstanding",
     "Outstanding Payment",
     "Operasional",
     "allow",
+    "payments.manage",
   ],
-  ["/business/:tenant/venues", "Kelola Venue", "Venue", "forbidden"],
+  ["/business/:tenant/venues", "Kelola Venue", "Venue", "forbidden", "venues.manage"],
   [
     "/business/:tenant/venues/:venueId/profile",
     "Profil dan Media",
     "Venue",
     "forbidden",
+    "venues.manage",
   ],
-  ["/business/:tenant/venues/:venueId/courts", "Lapangan", "Venue", "forbidden"],
+  [
+    "/business/:tenant/venues/:venueId/courts",
+    "Lapangan",
+    "Venue",
+    "forbidden",
+    "venues.manage",
+  ],
   [
     "/business/:tenant/venues/:venueId/availability",
     "Ketersediaan",
     "Venue",
     "forbidden",
+    "schedule.manage",
   ],
-  ["/business/:tenant/venues/:venueId/pricing", "Harga", "Venue", "forbidden"],
-  ["/business/:tenant/venues/:venueId/policies", "Kebijakan", "Venue", "forbidden"],
-  ["/business/:tenant/finance", "Ringkasan Keuangan", "Keuangan", "forbidden"],
-  ["/business/:tenant/finance/transactions", "Transaksi", "Keuangan", "forbidden"],
-  ["/business/:tenant/finance/refunds", "Refund dan Sengketa", "Keuangan", "forbidden"],
-  ["/business/:tenant/finance/ledger", "Ledger", "Keuangan", "forbidden"],
-  ["/business/:tenant/finance/payouts", "Payout Simulasi", "Keuangan", "forbidden"],
-  ["/business/:tenant/growth/promotions", "Promosi", "Pertumbuhan", "forbidden"],
-  ["/business/:tenant/growth/reviews", "Review", "Pertumbuhan", "allow"],
-  ["/business/:tenant/growth/support", "Tiket", "Pertumbuhan", "allow"],
+  [
+    "/business/:tenant/venues/:venueId/pricing",
+    "Harga",
+    "Venue",
+    "forbidden",
+    "pricing.manage",
+  ],
+  [
+    "/business/:tenant/venues/:venueId/policies",
+    "Kebijakan",
+    "Venue",
+    "forbidden",
+    "venues.manage",
+  ],
+  [
+    "/business/:tenant/finance",
+    "Ringkasan Keuangan",
+    "Keuangan",
+    "forbidden",
+    "finance.view",
+  ],
+  [
+    "/business/:tenant/finance/transactions",
+    "Transaksi",
+    "Keuangan",
+    "forbidden",
+    "payments.manage",
+  ],
+  [
+    "/business/:tenant/finance/refunds",
+    "Refund dan Sengketa",
+    "Keuangan",
+    "forbidden",
+    "refunds.manage",
+  ],
+  [
+    "/business/:tenant/finance/ledger",
+    "Ledger",
+    "Keuangan",
+    "forbidden",
+    "finance.view",
+  ],
+  [
+    "/business/:tenant/finance/payouts",
+    "Payout Simulasi",
+    "Keuangan",
+    "forbidden",
+    "payouts.view",
+  ],
+  [
+    "/business/:tenant/growth/promotions",
+    "Promosi",
+    "Pertumbuhan",
+    "forbidden",
+    "promotions.manage",
+  ],
+  [
+    "/business/:tenant/growth/reviews",
+    "Review",
+    "Pertumbuhan",
+    "allow",
+    "reviews.manage",
+  ],
+  [
+    "/business/:tenant/growth/support",
+    "Tiket",
+    "Pertumbuhan",
+    "allow",
+    "support.manage",
+  ],
   ["/business/:tenant/growth/mabar", "Mabar di Venue", "Pertumbuhan", "allow"],
-  ["/business/:tenant/team", "Tim", "Pengaturan", "forbidden"],
-  ["/business/:tenant/notifications", "Notifikasi", "Pengaturan", "allow"],
+  ["/business/:tenant/team", "Tim", "Pengaturan", "forbidden", "team.manage"],
+  [
+    "/business/:tenant/notifications",
+    "Notifikasi",
+    "Pengaturan",
+    "allow",
+    "operations.view",
+  ],
   ["/business/:tenant/settings", "Pengaturan", "Pengaturan", "forbidden"],
 ] as const;
 const admin = [
@@ -112,11 +202,12 @@ export const routeRegistry: RouteDefinition[] = [
     section,
     shell: "customer" as const,
   })),
-  ...business.map(([path, title, section, staff]) => ({
+  ...business.map(([path, title, section, staff, permission]) => ({
     path,
     title,
     section,
     staff: staff as "allow" | "forbidden",
+    permission,
     shell: "business" as const,
   })),
   ...admin.map(([path, title, section]) => ({

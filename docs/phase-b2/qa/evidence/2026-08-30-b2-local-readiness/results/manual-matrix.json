@@ -1,0 +1,520 @@
+{
+  "generatedAt": "2026-08-30T09:13:56.099Z",
+  "environment": {
+    "web": "http://127.0.0.1:4175",
+    "api": "http://127.0.0.1:3102",
+    "browser": "External Chrome"
+  },
+  "summary": {
+    "expected": 24,
+    "captured": 24,
+    "passed": 24,
+    "failed": 0
+  },
+  "items": [
+    {
+      "role": "admin",
+      "route": "http://127.0.0.1:4175/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "http://127.0.0.1:4175/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "http://127.0.0.1:4175/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 1024,
+        "width": 768
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "http://127.0.0.1:4175/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "http://127.0.0.1:4175/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "admin",
+      "route": "http://127.0.0.1:4175/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "http://127.0.0.1:4175/venues",
+      "heading": "Temukan tempat mainmu",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi, 1 belum dibaca",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "http://127.0.0.1:4175/venues",
+      "heading": "Temukan tempat mainmu",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi, 1 belum dibaca",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "http://127.0.0.1:4175/venues",
+      "heading": "Temukan tempat mainmu",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 1024,
+        "width": 768
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LapanganGo beranda",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "http://127.0.0.1:4175/venues",
+      "heading": "Temukan tempat mainmu",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LapanganGo beranda",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "http://127.0.0.1:4175/venues",
+      "heading": "Temukan tempat mainmu",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LapanganGo beranda",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "customer",
+      "route": "http://127.0.0.1:4175/venues",
+      "heading": "Temukan tempat mainmu",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LapanganGo beranda",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/finance",
+      "heading": "Ringkasan keuangan",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/finance",
+      "heading": "Ringkasan keuangan",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/finance",
+      "heading": "Ringkasan keuangan",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 1024,
+        "width": 768
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/finance",
+      "heading": "Ringkasan keuangan",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/finance",
+      "heading": "Ringkasan keuangan",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "owner",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/finance",
+      "heading": "Ringkasan keuangan",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/overview",
+      "heading": "Ringkasan operasional",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/overview",
+      "heading": "Ringkasan operasional",
+      "requestedViewport": {
+        "width": 360,
+        "height": 800
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 800,
+        "width": 360
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "Notifikasi",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/overview",
+      "heading": "Ringkasan operasional",
+      "requestedViewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 1024,
+        "width": 768
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/overview",
+      "heading": "Ringkasan operasional",
+      "requestedViewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/overview",
+      "heading": "Ringkasan operasional",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "dark",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "dark",
+      "status": "pass"
+    },
+    {
+      "role": "staff",
+      "route": "http://127.0.0.1:4175/business/MSZLAU6I1Lz-zF_YqkIXsQ/overview",
+      "heading": "Ringkasan operasional",
+      "requestedViewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "requestedTheme": "light",
+      "actualViewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "brokenImages": 0,
+      "clippedCriticalElements": 0,
+      "focusVisible": true,
+      "focusedElement": "LGLapanganGo",
+      "horizontalOverflow": false,
+      "theme": "light",
+      "status": "pass"
+    }
+  ]
+}

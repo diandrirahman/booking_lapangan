@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.js";
 import { loadEnvironment } from "../src/config/environment.js";
 import { formatPublicId } from "../src/database/ids.js";
-import { createRealtimeRouter } from "../src/realtime/realtimeRouter.js";
+import {
+  canReceiveRealtimeEvent,
+  createRealtimeRouter,
+} from "../src/realtime/realtimeRouter.js";
+import type { RealtimeEvent } from "../src/realtime/OutboxPublisher.js";
 import type { TenantAuthorizationService } from "../src/tenant/authorization/TenantAuthorizationService.js";
 import type { Redis } from "ioredis";
 
@@ -15,6 +19,44 @@ class FailingSubscriber extends EventEmitter {
 }
 
 describe("realtimeRouter", () => {
+  it("memisahkan audience Customer, tenant, dan platform", () => {
+    const customerId = formatPublicId(100);
+    const tenantId = formatPublicId(1);
+    const event: RealtimeEvent = {
+      id: formatPublicId(1),
+      eventType: "payment.status_changed",
+      resource: { type: "payment_attempt", id: formatPublicId(2) },
+      tenantId,
+      audienceUserId: customerId,
+      version: 1,
+      occurredAt: new Date().toISOString(),
+      hint: { status: "PAID" },
+    };
+
+    expect(
+      canReceiveRealtimeEvent(event, { userId: customerId, platformScope: false }),
+    ).toBe(true);
+    expect(
+      canReceiveRealtimeEvent(event, {
+        userId: formatPublicId(101),
+        platformScope: false,
+      }),
+    ).toBe(false);
+    expect(
+      canReceiveRealtimeEvent(event, {
+        userId: formatPublicId(200),
+        tenantId,
+        platformScope: false,
+      }),
+    ).toBe(true);
+    expect(
+      canReceiveRealtimeEvent(event, {
+        userId: formatPublicId(4),
+        platformScope: true,
+      }),
+    ).toBe(true);
+  });
+
   it("mengirim degraded dan disconnect aman ketika Redis gagal", async () => {
     const environment = loadEnvironment({ NODE_ENV: "test" });
     const subscriber = new FailingSubscriber();

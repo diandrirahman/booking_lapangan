@@ -134,7 +134,11 @@ export function createVenueSetupRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = createSchema.parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "venues.manage",
+      );
       response.status(201).json(await service.createDraft(input.tenantId, input.name));
     }),
   );
@@ -144,7 +148,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId, ...profile } = profileSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "venues.manage",
+        venueId,
+      );
       await service.updateProfile(venueId, tenantId, profile);
       response.status(204).end();
     }),
@@ -155,7 +164,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId, sportIds, facilityIds } = catalogSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "venues.manage",
+        venueId,
+      );
       await service.replaceCatalog(venueId, tenantId, sportIds, facilityIds);
       response.status(204).end();
     }),
@@ -166,7 +180,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId, ...input } = courtSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "venues.manage",
+        venueId,
+      );
       response.status(201).json(await service.createCourt(venueId, tenantId, input));
     }),
   );
@@ -177,7 +196,12 @@ export function createVenueSetupRouter(
       const { tenantId, ...input } = availabilitySchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
       const courtId = publicIdSchema.parse(request.params.courtId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "schedule.manage",
+        venueId,
+      );
       await service.saveCourtAvailability(venueId, courtId, tenantId, input);
       response.status(204).end();
     }),
@@ -188,7 +212,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId, ...input } = exceptionSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "schedule.manage",
+        venueId,
+      );
       response
         .status(201)
         .json(await service.createException(venueId, tenantId, input));
@@ -200,7 +229,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId, ...input } = paymentSettingsSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "payments.manage",
+        venueId,
+      );
       await service.savePaymentSettings(venueId, tenantId, input);
       response.status(204).end();
     }),
@@ -211,7 +245,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId, ...input } = addonSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "venues.manage",
+        venueId,
+      );
       response.status(201).json(await service.createAddon(venueId, tenantId, input));
     }),
   );
@@ -221,7 +260,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId } = tenantSchema.parse(request.query);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "venues.manage",
+        venueId,
+      );
       response.json(await service.progress(venueId, tenantId));
     }),
   );
@@ -231,7 +275,12 @@ export function createVenueSetupRouter(
     asyncHandler(async (request, response) => {
       const { tenantId } = tenantSchema.parse(request.body);
       const venueId = publicIdSchema.parse(request.params.venueId);
-      await authorization.requireOwner(request.auth!.userId, tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "venues.manage",
+        venueId,
+      );
       response
         .status(201)
         .json(
@@ -244,7 +293,7 @@ export function createVenueSetupRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = transferSchema.parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
+      await authorization.requirePrimaryOwner(request.auth!.userId, input.tenantId);
       await tenantService.transferPrimaryOwner(
         input.tenantId,
         request.auth!.userId,

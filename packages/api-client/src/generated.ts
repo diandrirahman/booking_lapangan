@@ -1029,10 +1029,843 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/business/role-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRoleTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/tenants/{tenantId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listTenantRoles"];
+        put?: never;
+        post: operations["copyTenantRoleTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/tenants/{tenantId}/roles/{roleId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateTenantRolePermissions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/tenants/{tenantId}/staff/{membershipId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["assignTenantRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/finance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBusinessFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/finance/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessLedger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/finance/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessPayments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/finance/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessPayouts"];
+        put?: never;
+        post: operations["requestManualPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/finance/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTenantFinanceSettings"];
+        put: operations["updateTenantFinanceSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/finance/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["exportBusinessFinance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessPromotions"];
+        put?: never;
+        post: operations["createBusinessPromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/commission-configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCommissionConfigs"];
+        put?: never;
+        post: operations["createCommissionConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminPromotions"];
+        put?: never;
+        post: operations["createAdminPromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/finance/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminLedger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminPayouts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payouts/{payoutId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminPayout"];
+        trace?: never;
+    };
+    "/admin/tenants/{tenantId}/finance-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateAdminTenantFinanceSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{bookingId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelCustomerBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{bookingId}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rescheduleCustomerBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/bookings/{bookingId}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestBusinessRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/refunds/{refundId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["decideAdminRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/refunds/{refundId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryAdminRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cancellation-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCancellationPolicies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/cancellation-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createCancellationPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/venues/{venueId}/cancellation-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["assignVenueCancellationPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listNotificationPreferences"];
+        put: operations["updateNotificationPreference"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/reminder-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listNotificationReminderOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notification-reminder-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createNotificationReminderOption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/venues/{venueId}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateVenueReminders"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/venues/{venueId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVenueReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{bookingId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createBookingReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{reviewId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateCustomerReview"];
+        trace?: never;
+    };
+    "/reviews/{reviewId}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reportCustomerReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/reviews/{reviewId}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["replyBusinessReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reviews/{reviewId}/moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["moderateAdminReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCustomerSupportTickets"];
+        put?: never;
+        post: operations["createCustomerSupportTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticketCode}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCustomerSupportMessages"];
+        put?: never;
+        post: operations["createCustomerSupportMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessSupportTickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/business/support/{ticketId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBusinessSupportMessages"];
+        put?: never;
+        post: operations["createBusinessSupportMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminSupportTickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support/{ticketId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminSupportTicket"];
+        trace?: never;
+    };
+    "/admin/support/{ticketId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminSupportMessages"];
+        put?: never;
+        post: operations["createAdminSupportMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        B2Object: {
+            [key: string]: unknown;
+        };
+        B2List: {
+            items: components["schemas"]["B2Object"][];
+        };
+        PromotionInput: {
+            tenantId?: string | null;
+            code: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            discountType: "PERCENT" | "FIXED";
+            discountValue: number;
+            minimumAmount?: number;
+            maximumDiscount?: number;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            startsAtTime?: string;
+            endsAtTime?: string;
+            quota?: number;
+            perUserLimit?: number;
+            firstBookingOnly?: boolean;
+            /** @enum {string} */
+            paymentMethod?: "FULL" | "DP" | "PAY_AT_VENUE";
+            /** @enum {string} */
+            fundingSource: "OWNER" | "PLATFORM";
+            budgetAmount?: number;
+            scopes?: {
+                /** @enum {string} */
+                type: "VENUE" | "SPORT" | "COURT";
+                referenceId: components["schemas"]["PublicId"];
+            }[];
+        };
+        CommissionConfigInput: {
+            tenantId: string | null;
+            rateBasisPoints: number;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo?: string;
+            trialDays?: number;
+            trialCompletedBookingLimit?: number;
+            /** @enum {string} */
+            gatewayFeeFunding: "OWNER" | "PLATFORM";
+            /** @default 250 */
+            gatewayFeeBasisPoints: number;
+            subsidyBudget?: number;
+            reason: string;
+        };
+        TenantRole: {
+            id: components["schemas"]["PublicId"];
+            name: string;
+            templateCode: string | null;
+            immutable: boolean;
+            permissions: string[];
+        };
+        FinanceSummary: {
+            /** @constant */
+            sandbox: true;
+            grossRevenue: number;
+            onlineRevenue: number;
+            offlineRevenue: number;
+            totalPaid: number;
+            balanceDue: number;
+            discounts: number;
+            commission: number;
+            refunds: number;
+            pendingBalance: number;
+            availableBalance: number;
+            paidOut: number;
+            netOwnerRevenue: number;
+            dpPaid: number;
+            cashRevenue: number;
+            gatewayFees: number;
+            heldBalance: number;
+            trends: {
+                /** Format: date */
+                date: string;
+                paid: number;
+            }[];
+            venueComparison: {
+                venueId: components["schemas"]["PublicId"];
+                name: string;
+                paid: number;
+            }[];
+            courtComparison: {
+                courtId: components["schemas"]["PublicId"];
+                name: string;
+                venueName: string;
+                paid: number;
+            }[];
+        };
         /** @description Deterministically encrypted reference; internal numeric key is never exposed. */
         PublicId: string;
         /** @description Opaque random reference used in customer-facing booking URLs. */
@@ -1071,6 +1904,9 @@ export interface components {
                 tenantId: components["schemas"]["PublicId"];
                 /** @enum {string} */
                 role: "PRIMARY_OWNER" | "OWNER" | "STAFF";
+                tenantRoleId: components["schemas"]["PublicId"] | null;
+                tenantRoleName: string | null;
+                permissions: string[];
             }[];
             platformAdmin: boolean;
         };
@@ -1104,6 +1940,9 @@ export interface components {
             /** @enum {string} */
             role: "PRIMARY_OWNER" | "OWNER" | "STAFF";
             status: string;
+            tenantRoleId: components["schemas"]["PublicId"] | null;
+            tenantRoleName: string | null;
+            permissions: string[];
             assignedVenueIds: components["schemas"]["PublicId"][];
         };
         SetupProgress: {
@@ -1285,11 +2124,13 @@ export interface components {
         };
         CustomerBookingSummary: components["schemas"]["Booking"] & {
             venueName: string;
+            courtId: components["schemas"]["PublicId"];
             courtName: string;
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
             endsAt: string;
+            reviewId: components["schemas"]["PublicId"] | null;
         };
         PricingPreviewInput: {
             tenantId: components["schemas"]["PublicId"];
@@ -1573,6 +2414,7 @@ export interface components {
             addonIds?: string[];
             /** @enum {string} */
             paymentMode: "FULL" | "DP" | "PAY_AT_VENUE";
+            promotionCode?: string;
         };
         Booking: {
             id: components["schemas"]["PublicId"];
@@ -2600,6 +3442,7 @@ export interface operations {
             content: {
                 "application/json": {
                     venueIds: components["schemas"]["PublicId"][];
+                    reason: string;
                 };
             };
         };
@@ -3424,6 +4267,1373 @@ export interface operations {
                     "text/event-stream": string;
                 };
             };
+        };
+    };
+    listRoleTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Global immutable role templates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["TenantRole"][];
+                    };
+                };
+            };
+        };
+    };
+    listTenantRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant-scoped roles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["TenantRole"][];
+                    };
+                };
+            };
+        };
+    };
+    copyTenantRoleTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    templateId: components["schemas"]["PublicId"];
+                    name: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Role copied */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    updateTenantRolePermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["schemas"]["PublicId"];
+                roleId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    permissions: string[];
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Permissions updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    assignTenantRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["schemas"]["PublicId"];
+                membershipId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    roleId: components["schemas"]["PublicId"];
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Role assigned. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    getBusinessFinanceSummary: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sandbox finance summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSummary"];
+                };
+            };
+        };
+    };
+    listBusinessLedger: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Balanced ledger transactions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    listBusinessPayments: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant payment attempts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    listBusinessPayouts: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sandbox payouts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    requestManualPayout: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    tenantId: components["schemas"]["PublicId"];
+                };
+            };
+        };
+        responses: {
+            /** @description Payout reserved */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    getTenantFinanceSettings: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant finance settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+        };
+    };
+    updateTenantFinanceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Settings updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    exportBusinessFinance: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+                dataset: "bookings" | "payments" | "refunds" | "payouts" | "promotions" | "staff-activity" | "offline-bookings";
+                format: "csv" | "xlsx";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV or XLSX export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    listBusinessPromotions: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Promotions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createBusinessPromotion: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionInput"];
+            };
+        };
+        responses: {
+            /** @description Promotion created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listCommissionConfigs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versioned commission config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createCommissionConfig: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionConfigInput"];
+            };
+        };
+        responses: {
+            /** @description Commission config created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listAdminPromotions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform and tenant promotions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createAdminPromotion: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionInput"];
+            };
+        };
+        responses: {
+            /** @description Platform promotion created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listAdminLedger: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform ledger view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    listAdminPayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sandbox payout batches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    updateAdminPayout: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Payout status updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    updateAdminTenantFinanceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["parameters"]["TenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Tenant minimum payout updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    cancelCustomerBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                bookingId: components["schemas"]["BookingReference"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Cancellation decision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    rescheduleCustomerBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                bookingId: components["schemas"]["BookingReference"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    newSlotIds: components["schemas"]["PublicId"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Reschedule created or awaiting price adjustment. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listBusinessRefunds: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant refunds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    requestBusinessRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                bookingId: components["schemas"]["BookingReference"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Refund request created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listAdminRefunds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform refunds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    decideAdminRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                refundId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Refund decision recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    retryAdminRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                refundId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Failed refund queued again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listCancellationPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation policy templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createCancellationPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Policy template created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    assignVenueCancellationPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueId: components["parameters"]["VenueId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Venue policy assigned. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User notification preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    updateNotificationPreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Preference updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listNotificationReminderOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active reminder options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createNotificationReminderOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Reminder option created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    updateVenueReminders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueId: components["parameters"]["VenueId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Venue reminder selections replaced. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listVenueReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible venue reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createBookingReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: components["schemas"]["BookingReference"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Review created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    updateCustomerReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Review updated within seven-day window. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    reportCustomerReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Review report recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listBusinessReviews: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant review management */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    replyBusinessReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Owner reply recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listAdminReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform review moderation queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    moderateAdminReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Review visibility updated with reason. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listCustomerSupportTickets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer tickets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createCustomerSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Ticket created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2Object"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listCustomerSupportMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer-owned ticket thread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createCustomerSupportMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Customer message recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listBusinessSupportTickets: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant support tickets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    listBusinessSupportMessages: {
+        parameters: {
+            query: {
+                tenantId: components["schemas"]["PublicId"];
+            };
+            header?: never;
+            path: {
+                ticketId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant-scoped ticket thread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createBusinessSupportMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Tenant message recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listAdminSupportTickets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform support tickets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    updateAdminSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Assignment */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    listAdminSupportMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform ticket thread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["B2List"];
+                };
+            };
+        };
+    };
+    createAdminSupportMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2Object"];
+            };
+        };
+        responses: {
+            /** @description Admin message recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
 }

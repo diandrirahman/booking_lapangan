@@ -7,6 +7,11 @@ const EVENT_TYPES = [
   "booking.created",
   "booking.status_changed",
   "payment.status_changed",
+  "refund.status_changed",
+  "transaction.dispute",
+  "earning.status_changed",
+  "payout.status_changed",
+  "support.status_changed",
   "venue.publication_changed",
 ];
 
@@ -66,6 +71,7 @@ export function RealtimeSync() {
           void queryClient.invalidateQueries({ queryKey: ["business"] });
           void queryClient.invalidateQueries({ queryKey: ["admin"] });
           void queryClient.invalidateQueries({ queryKey: ["availability"] });
+          void queryClient.invalidateQueries({ queryKey: ["notifications"] });
         });
       }
       eventSource.onerror = () => {

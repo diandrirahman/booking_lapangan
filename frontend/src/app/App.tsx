@@ -26,6 +26,19 @@ import {
   IntegratedAdminAuditPage,
 } from "../pages/IntegratedAdminPages";
 import { BusinessTeamPage } from "../pages/business/BusinessTeamPage";
+import {
+  AdminB2Page,
+  BusinessB2ListPage,
+  BusinessFinancePage,
+  CustomerSupportPage,
+  CustomerReviewsPage,
+} from "../pages/B2IntegratedPages";
+import {
+  AdminCancellationPoliciesPage,
+  AdminReminderOptionsPage,
+  BusinessCancellationPolicyPage,
+  BusinessReminderSettingsPage,
+} from "../pages/B2SettingsPages";
 
 const LandingPage = lazyNamed(() => import("../pages/CustomerPages"), "LandingPage");
 const VenueSearchPage = lazyNamed(
@@ -186,8 +199,18 @@ export function App() {
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/reviews" element={<ReviewsPage />} />
-              <Route path="/support" element={<SupportPage />} />
+              <Route
+                path="/reviews"
+                element={
+                  prototypeModeEnabled ? <ReviewsPage /> : <CustomerReviewsPage />
+                }
+              />
+              <Route
+                path="/support"
+                element={
+                  prototypeModeEnabled ? <SupportPage /> : <CustomerSupportPage />
+                }
+              />
               <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/business/:tenant/overview"
@@ -257,7 +280,11 @@ export function App() {
                 path="/business/:tenant/venues/:venueId/policies"
                 element={
                   <OwnerOnly>
-                    <VenueSetupDetailPage />
+                    {prototypeModeEnabled ? (
+                      <VenueSetupDetailPage />
+                    ) : (
+                      <BusinessCancellationPolicyPage />
+                    )}
                   </OwnerOnly>
                 }
               />
@@ -328,7 +355,12 @@ function AuthenticatedWorkspaceGate({ children }: { children: React.ReactNode })
         location.pathname,
       ),
     );
-    if (membership.role === "STAFF" && definition?.staff === "forbidden") {
+    if (
+      membership.role === "STAFF" &&
+      (definition?.permission
+        ? !membership.permissions.includes(definition.permission)
+        : definition?.staff === "forbidden")
+    ) {
       return <ForbiddenPage />;
     }
   }
@@ -344,7 +376,18 @@ function OwnerOnly({ children }: { children: React.ReactNode }) {
     const membership = session.data?.memberships.find(
       (candidate) => candidate.tenantId === tenantId,
     );
-    return membership?.role === "STAFF" ? <ForbiddenPage /> : <>{children}</>;
+    if (membership?.role !== "STAFF") return <>{children}</>;
+    const definition = routeRegistry.find((candidate) =>
+      new RegExp(`^${candidate.path.replace(/:[^/]+/g, "[^/]+")}$`).test(
+        location.pathname,
+      ),
+    );
+    return definition?.permission &&
+      membership.permissions.includes(definition.permission) ? (
+      <>{children}</>
+    ) : (
+      <ForbiddenPage />
+    );
   }
   return state.role === "staff" ? <ForbiddenPage /> : <>{children}</>;
 }
@@ -364,11 +407,77 @@ function GuardedSupporting({ route }: { route: RouteDefinition }) {
   if (!prototypeModeEnabled && route.path === "/admin/templates/payments") {
     return <AdminPaymentOptionsPage />;
   }
+  if (!prototypeModeEnabled && route.path === "/admin/templates/refunds") {
+    return <AdminCancellationPoliciesPage />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/config/notifications") {
+    return <AdminReminderOptionsPage />;
+  }
   if (!prototypeModeEnabled && route.path === "/admin/audit") {
     return <IntegratedAdminAuditPage />;
   }
   if (!prototypeModeEnabled && route.path === "/business/:tenant/team") {
     return <BusinessTeamPage />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/notifications") {
+    return <BusinessReminderSettingsPage />;
+  }
+  if (
+    !prototypeModeEnabled &&
+    route.path === "/business/:tenant/venues/:venueId/policies"
+  ) {
+    return <BusinessCancellationPolicyPage />;
+  }
+  if (!prototypeModeEnabled && route.path === "/support") {
+    return <CustomerSupportPage />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/finance") {
+    return <BusinessFinancePage />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/finance/ledger") {
+    return <BusinessB2ListPage resource="ledger" title="Ledger" />;
+  }
+  if (
+    !prototypeModeEnabled &&
+    route.path === "/business/:tenant/finance/transactions"
+  ) {
+    return <BusinessB2ListPage resource="payments" title="Transaksi pembayaran" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/finance/payouts") {
+    return <BusinessB2ListPage resource="payouts" title="Payout simulasi" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/finance/refunds") {
+    return <BusinessB2ListPage resource="refunds" title="Refund dan sengketa" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/growth/promotions") {
+    return <BusinessB2ListPage resource="promotions" title="Promosi" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/growth/reviews") {
+    return <BusinessB2ListPage resource="reviews" title="Review" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/business/:tenant/growth/support") {
+    return <BusinessB2ListPage resource="support" title="Tiket bantuan" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/commissions") {
+    return <AdminB2Page resource="commission-configs" title="Komisi dan trial" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/refunds") {
+    return <AdminB2Page resource="refunds" title="Refund dan sengketa" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/support") {
+    return <AdminB2Page resource="support" title="Tiket bantuan" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/promotions") {
+    return <AdminB2Page resource="promotions" title="Promo platform" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/payouts") {
+    return <AdminB2Page resource="payouts" title="Payout simulasi" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/reviews") {
+    return <AdminB2Page resource="reviews" title="Review dan laporan" />;
+  }
+  if (!prototypeModeEnabled && route.path === "/admin/finance") {
+    return <AdminB2Page resource="finance/ledger" title="Ledger platform" />;
   }
   return <SupportingPage route={route} />;
 }

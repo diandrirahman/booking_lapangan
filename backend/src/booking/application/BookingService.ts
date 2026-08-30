@@ -16,16 +16,22 @@ import {
   bookingSlotReservations,
   bookingStateTransitions,
   commandIdempotency,
+  cancellationPolicyTemplates,
+  cancellationPolicyTiers,
   courtBookingSettings,
   courtSlots,
   courts,
   offlineBookingDetails,
   outboxEvents,
   priceRules,
+  reviews,
   venuePaymentSettings,
+  venuePolicyAssignments,
   venues,
 } from "../../database/schema/index.js";
 import { ApiError } from "../../http/ApiError.js";
+import { FinanceService } from "../../finance/FinanceService.js";
+import { NotificationService } from "../../identity/notifications/NotificationService.js";
 import {
   BOOKING_REFERENCE_PREFIX,
   createPublicReference,
@@ -54,6 +60,7 @@ export interface CreateBookingInput {
   slotIds: string[];
   paymentMode: PaymentMode;
   addonIds?: string[] | undefined;
+  promotionCode?: string | undefined;
   source?: "ONLINE" | "OFFLINE";
   offlineCustomer?: {
     name: string;
@@ -78,16 +85,20 @@ export interface BookingView {
 }
 
 export interface CustomerBookingSummary extends BookingView {
+  courtId: string;
   venueName: string;
   courtName: string;
   startsAt: string;
   endsAt: string;
+  reviewId: string | null;
 }
 
 export class BookingService {
   constructor(
     private readonly database: DatabaseConnection,
     private readonly publishPendingEvents: () => Promise<void> = noEventPublisher,
+    private readonly financeService = new FinanceService(database),
+    private readonly notificationService = new NotificationService(database),
   ) {}
 
   async create(
@@ -117,6 +128,7 @@ export class BookingService {
           const [court] = await transaction
             .select({
               venueId: courts.venueId,
+              sportId: courts.sportId,
               tenantId: venues.tenantId,
               timezone: venues.timezone,
             })
@@ -255,7 +267,28 @@ export class BookingService {
             0,
           );
           const originalAmount = courtSubtotal + addonTotal;
-          const totalAmount = resolveAdjustedAmount(originalAmount, input);
+          const adjustedAmount = resolveAdjustedAmount(originalAmount, input);
+          const financials = await this.financeService.prepareBookingFinancials(
+            transaction,
+            {
+              tenantId: court.tenantId,
+              venueId: venueDatabaseId,
+              courtId: courtDatabaseId,
+              sportId: court.sportId,
+              userId: actorDatabaseId,
+              paymentMode: input.paymentMode,
+              dpPercentage: paymentSettings.dpPercentage,
+              reservationAmount: paymentSettings.reservationAmount,
+              courtSubtotal:
+                courtSubtotal + Math.max(0, adjustedAmount - originalAmount),
+              addonSubtotal: addonTotal,
+              promotionCode: input.promotionCode,
+              ownerAdjustment: Math.max(0, originalAmount - adjustedAmount),
+              timezone: court.timezone,
+              now,
+            },
+          );
+          const totalAmount = financials.customerTotal;
           const balanceDue = totalAmount;
           const orderedSelectedSlots = [...selectedSlots].sort(
             (left, right) => left.startsAt.getTime() - right.startsAt.getTime(),
@@ -291,6 +324,10 @@ export class BookingService {
             : new Date(now.getTime() + HOLD_DURATION_MILLISECONDS);
           const initialStatus: BookingStatus = isOfflineBooking ? "CONFIRMED" : "HOLD";
           const bookingReference = createPublicReference(BOOKING_REFERENCE_PREFIX);
+          const cancellationPolicySnapshot = await resolveCancellationPolicySnapshot(
+            transaction,
+            venueDatabaseId,
+          );
 
           const [createdBooking] = await transaction
             .insert(bookings)
@@ -306,11 +343,19 @@ export class BookingService {
               balanceDue,
               holdExpiresAt,
               confirmationExpiresAt: null,
+              cancellationPolicySnapshot,
               createdByUserId: actorDatabaseId,
             })
             .$returningId();
           if (!createdBooking) throw new Error("MySQL tidak mengembalikan ID booking.");
           const bookingDatabaseId = createdBooking.id;
+          await this.financeService.persistBookingFinancials(
+            transaction,
+            bookingDatabaseId,
+            1,
+            actorDatabaseId,
+            financials,
+          );
 
           const [createdItem] = await transaction
             .insert(bookingItems)
@@ -365,6 +410,23 @@ export class BookingService {
                 },
               })),
             );
+          }
+          if (financials.discountAmount > 0) {
+            await transaction.insert(bookingPriceLines).values({
+              bookingId: bookingDatabaseId,
+              lineType: "PROMOTION",
+              referenceId: financials.promotionId,
+              label: financials.promotionCode
+                ? `Promo ${financials.promotionCode}`
+                : "Penyesuaian owner",
+              quantity: 1,
+              unitAmount: financials.discountAmount,
+              totalAmount: financials.discountAmount,
+              ruleSnapshot: {
+                fundingSource: financials.discountFunding,
+                immutable: true,
+              },
+            });
           }
           await transaction.insert(bookingSlotReservations).values(
             [...selectedSlots, ...bufferSlots].map((slot) => ({
@@ -503,8 +565,10 @@ export class BookingService {
         paymentStatus: bookingPaymentSummaries.status,
         venueName: venues.name,
         courtName: courts.name,
+        courtId: courts.id,
         startsAt: bookingItems.startsAt,
         endsAt: bookingItems.endsAt,
+        reviewId: reviews.id,
       })
       .from(bookings)
       .innerJoin(
@@ -514,6 +578,7 @@ export class BookingService {
       .innerJoin(venues, eq(venues.id, bookings.venueId))
       .innerJoin(bookingItems, eq(bookingItems.bookingId, bookings.id))
       .innerJoin(courts, eq(courts.id, bookingItems.courtId))
+      .leftJoin(reviews, eq(reviews.bookingId, bookings.id))
       .where(eq(bookings.customerUserId, parsePublicId(userId)))
       .orderBy(desc(bookingItems.startsAt))
       .limit(100);
@@ -522,8 +587,10 @@ export class BookingService {
       ...this.toView(row.booking, row.paymentStatus),
       venueName: row.venueName,
       courtName: row.courtName,
+      courtId: formatPublicId(row.courtId),
       startsAt: row.startsAt.toISOString(),
       endsAt: row.endsAt.toISOString(),
+      reviewId: row.reviewId ? formatPublicId(row.reviewId) : null,
     }));
   }
 
@@ -558,6 +625,11 @@ export class BookingService {
     nextStatus: BookingStatus,
     actorUserId: string,
     reason: string,
+    notification?: {
+      title: string;
+      body: string;
+      kind?: string;
+    },
   ): Promise<void> {
     const actorDatabaseId = parsePublicId(actorUserId);
     await this.database.db.transaction(async (transaction) => {
@@ -597,9 +669,35 @@ export class BookingService {
         await transaction
           .delete(bookingSlotReservations)
           .where(eq(bookingSlotReservations.bookingId, bookingDatabaseId));
+        await this.financeService.releaseUnusedFinancialReservations(
+          transaction,
+          bookingDatabaseId,
+        );
+      }
+      if (nextStatus === "COMPLETED") {
+        await this.financeService.markBookingCompleted(
+          transaction,
+          bookingDatabaseId,
+          new Date(),
+        );
+      }
+      if (booking.customerUserId) {
+        await this.notificationService.deliverInTransaction(transaction, {
+          eventId: `booking-status:${bookingDatabaseId}:${nextVersion}`,
+          userId: booking.customerUserId,
+          eventType: "booking.status_changed",
+          ...(notification?.kind ? { userNotificationKind: notification.kind } : {}),
+          title: notification?.title ?? "Status booking diperbarui",
+          body:
+            notification?.body ??
+            `Booking ${booking.bookingCode} kini berstatus ${nextStatus}.`,
+          actionPath: `/bookings/${booking.bookingCode}`,
+          critical: true,
+        });
       }
       await transaction.insert(outboxEvents).values({
         tenantId: booking.tenantId,
+        audienceUserId: booking.customerUserId,
         eventType: "booking.status_changed",
         resourceType: "booking",
         resourceId: bookingDatabaseId,
@@ -857,3 +955,44 @@ function databaseErrorCode(error: unknown): string | undefined {
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : "Aturan booking tidak terpenuhi.";
 }
+
+export async function resolveCancellationPolicySnapshot(
+  transaction: Parameters<Parameters<DatabaseConnection["db"]["transaction"]>[0]>[0],
+  venueId: number,
+) {
+  const [assignment] = await transaction
+    .select({ template: cancellationPolicyTemplates })
+    .from(venuePolicyAssignments)
+    .innerJoin(
+      cancellationPolicyTemplates,
+      eq(cancellationPolicyTemplates.id, venuePolicyAssignments.templateId),
+    )
+    .where(eq(venuePolicyAssignments.venueId, venueId))
+    .limit(1);
+  if (!assignment) {
+    return {
+      templateId: null,
+      name: "Kebijakan standar LapanganGo",
+      tiers: BASELINE_CANCELLATION_TIERS,
+    };
+  }
+  const tiers = await transaction
+    .select({
+      minimumHoursBefore: cancellationPolicyTiers.minimumHoursBefore,
+      maximumHoursBefore: cancellationPolicyTiers.maximumHoursBefore,
+      refundBasisPoints: cancellationPolicyTiers.refundBasisPoints,
+    })
+    .from(cancellationPolicyTiers)
+    .where(eq(cancellationPolicyTiers.templateId, assignment.template.id));
+  return {
+    templateId: formatPublicId(assignment.template.id),
+    name: assignment.template.name,
+    tiers,
+  };
+}
+
+const BASELINE_CANCELLATION_TIERS = [
+  { minimumHoursBefore: 24, maximumHoursBefore: null, refundBasisPoints: 10_000 },
+  { minimumHoursBefore: 6, maximumHoursBefore: 24, refundBasisPoints: 5_000 },
+  { minimumHoursBefore: 0, maximumHoursBefore: 6, refundBasisPoints: 0 },
+];

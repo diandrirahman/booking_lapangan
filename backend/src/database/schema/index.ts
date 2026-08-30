@@ -2,5 +2,8 @@ export * from "./booking.js";
 export * from "./catalog.js";
 export * from "./identity.js";
 export * from "./payment.js";
+export * from "./finance.js";
 export * from "./platform.js";
+export * from "./review.js";
 export * from "./scheduling.js";
+export * from "./support.js";

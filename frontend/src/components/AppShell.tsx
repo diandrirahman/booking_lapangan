@@ -131,10 +131,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     (route) =>
       route.shell === shell &&
       (prototypeModeEnabled || !route.path.includes(":venueId")) &&
-      !(
-        (prototypeModeEnabled ? state.role === "staff" : staffSession) &&
-        route.staff === "forbidden"
-      ),
+      !(prototypeModeEnabled
+        ? state.role === "staff" && route.staff === "forbidden"
+        : staffSession &&
+          (route.permission
+            ? !sessionMembership?.permissions.includes(route.permission)
+            : route.staff === "forbidden")),
   );
   const grouped = Array.from(
     new Map(
@@ -255,11 +257,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <small>
             {prototypeModeEnabled
               ? roleLabels[state.role]
-              : sessionMembership?.role === "STAFF"
-                ? "Staff"
-                : sessionMembership
-                  ? "Owner"
-                  : "Customer"}
+              : shell === "admin"
+                ? "Admin platform"
+                : sessionMembership?.role === "STAFF"
+                  ? "Staff"
+                  : sessionMembership
+                    ? "Owner"
+                    : "Customer"}
           </small>
         </div>
       </div>

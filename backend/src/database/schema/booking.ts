@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   datetime,
+  foreignKey,
   index,
   int,
   json,
@@ -36,6 +37,7 @@ export const bookings = mysqlTable(
     balanceDue: bigint("balance_due", { mode: "number", unsigned: true }).notNull(),
     holdExpiresAt: datetime("hold_expires_at", { mode: "date" }),
     confirmationExpiresAt: datetime("confirmation_expires_at", { mode: "date" }),
+    cancellationPolicySnapshot: json("cancellation_policy_snapshot"),
     version: int("version", { unsigned: true }).notNull().default(1),
     createdByUserId: bigReference("created_by_user_id")
       .notNull()
@@ -201,21 +203,81 @@ export const bookingCancellations = mysqlTable("booking_cancellations", {
   actorUserId: bigReference("actor_user_id").references(() => users.id),
   reason: text("reason").notNull(),
   kind: varchar("kind", { length: 24 }).notNull(),
+  refundBasisPoints: int("refund_basis_points", { unsigned: true }),
+  refundableAmount: bigint("refundable_amount", { mode: "number", unsigned: true }),
+  decision: varchar("decision", { length: 20 }),
   createdAt: datetime("created_at", { mode: "date", fsp: 3 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP(3)`),
 });
 
-export const bookingReschedules = mysqlTable("booking_reschedules", {
+export const bookingReschedules = mysqlTable(
+  "booking_reschedules",
+  {
+    id: bigId(),
+    bookingId: bigReference("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    previousSlotIds: json("previous_slot_ids").notNull(),
+    newSlotIds: json("new_slot_ids").notNull(),
+    reason: text("reason").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("COMPLETED"),
+    priceDifference: bigint("price_difference", { mode: "number" })
+      .notNull()
+      .default(0),
+    policySnapshot: json("policy_snapshot"),
+    expiresAt: datetime("expires_at", { mode: "date", fsp: 3 }),
+    finalizedAt: datetime("finalized_at", { mode: "date", fsp: 3 }),
+    actorUserId: bigReference("actor_user_id").references(() => users.id),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [uniqueIndex("booking_reschedule_once_unique").on(table.bookingId)],
+);
+
+export const cancellationPolicyTemplates = mysqlTable("cancellation_policy_templates", {
   id: bigId(),
-  bookingId: bigReference("booking_id")
+  name: varchar("name", { length: 80 }).notNull(),
+  active: boolean("active").notNull().default(true),
+  createdByUserId: bigReference("created_by_user_id").references(() => users.id),
+  createdAt: datetime("created_at", { mode: "date" })
     .notNull()
-    .references(() => bookings.id),
-  previousSlotIds: json("previous_slot_ids").notNull(),
-  newSlotIds: json("new_slot_ids").notNull(),
-  reason: text("reason").notNull(),
-  actorUserId: bigReference("actor_user_id").references(() => users.id),
-  createdAt: datetime("created_at", { mode: "date", fsp: 3 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP(3)`),
+    .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const cancellationPolicyTiers = mysqlTable(
+  "cancellation_policy_tiers",
+  {
+    id: bigId(),
+    templateId: bigReference("template_id").notNull(),
+    minimumHoursBefore: int("minimum_hours_before", { unsigned: true }).notNull(),
+    maximumHoursBefore: int("maximum_hours_before", { unsigned: true }),
+    refundBasisPoints: int("refund_basis_points", { unsigned: true }).notNull(),
+  },
+  (table) => [
+    index("cancellation_policy_tier_idx").on(table.templateId),
+    foreignKey({
+      name: "cancel_policy_tier_template_fk",
+      columns: [table.templateId],
+      foreignColumns: [cancellationPolicyTemplates.id],
+    }),
+  ],
+);
+
+export const venuePolicyAssignments = mysqlTable(
+  "venue_policy_assignments",
+  {
+    venueId: entityReference("venue_id")
+      .primaryKey()
+      .references(() => venues.id),
+    templateId: bigReference("template_id").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "venue_policy_template_fk",
+      columns: [table.templateId],
+      foreignColumns: [cancellationPolicyTemplates.id],
+    }),
+  ],
+);

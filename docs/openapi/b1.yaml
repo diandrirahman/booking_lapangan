@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: LapanganGo Phase B1 API
-  version: 1.0.0
-  description: API demo sandbox untuk core booking LapanganGo.
+  title: LapanganGo Phase B2 API
+  version: 2.0.0
+  description: Kontrak kumulatif B1 dan B2 untuk runtime lokal sandbox LapanganGo.
 x-lapangango-global-json-responses:
   "413":
     $ref: "#/components/responses/PayloadTooLarge"
@@ -17,6 +17,9 @@ tags:
   - name: Payments
   - name: Business
   - name: Admin
+  - name: Finance
+  - name: Reviews
+  - name: Support
 paths:
   /health/live:
     get:
@@ -777,11 +780,12 @@ paths:
           application/json:
             schema:
               type: object
-              required: [venueIds]
+              required: [venueIds, reason]
               properties:
                 venueIds:
                   type: array
                   items: { $ref: "#/components/schemas/PublicId" }
+                reason: { type: string, minLength: 3, maxLength: 500 }
       responses:
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
@@ -1373,6 +1377,1097 @@ paths:
           content:
             text/event-stream:
               schema: { type: string }
+  /business/role-templates:
+    get:
+      tags: [Business]
+      operationId: listRoleTemplates
+      responses:
+        "200":
+          description: Global immutable role templates.
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      properties:
+                        {
+                          items:
+                            {
+                              type: array,
+                              items: { $ref: "#/components/schemas/TenantRole" },
+                            },
+                        },
+                    },
+                },
+            }
+  /business/tenants/{tenantId}/roles:
+    parameters:
+      - {
+          name: tenantId,
+          in: path,
+          required: true,
+          schema: { $ref: "#/components/schemas/PublicId" },
+        }
+    get:
+      tags: [Business]
+      operationId: listTenantRoles
+      responses:
+        "200":
+          description: Tenant-scoped roles.
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      properties:
+                        {
+                          items:
+                            {
+                              type: array,
+                              items: { $ref: "#/components/schemas/TenantRole" },
+                            },
+                        },
+                    },
+                },
+            }
+    post:
+      tags: [Business]
+      operationId: copyTenantRoleTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, name, reason]
+              properties:
+                templateId: { $ref: "#/components/schemas/PublicId" }
+                name: { type: string }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "201":
+          {
+            description: Role copied,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/tenants/{tenantId}/roles/{roleId}/permissions:
+    put:
+      tags: [Business]
+      operationId: updateTenantRolePermissions
+      parameters:
+        - {
+            name: tenantId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - {
+            name: roleId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [permissions, reason],
+                    properties:
+                      {
+                        permissions: { type: array, items: { type: string } },
+                        reason: { type: string },
+                      },
+                  },
+              },
+          }
+      responses:
+        "204": { description: Permissions updated. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/tenants/{tenantId}/staff/{membershipId}/role:
+    put:
+      tags: [Business]
+      operationId: assignTenantRole
+      parameters:
+        - {
+            name: tenantId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - {
+            name: membershipId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [roleId, reason],
+                    properties:
+                      {
+                        roleId: { $ref: "#/components/schemas/PublicId" },
+                        reason: { type: string, minLength: 3, maxLength: 500 },
+                      },
+                  },
+              },
+          }
+      responses:
+        "204": { description: Role assigned. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/finance:
+    get:
+      tags: [Finance]
+      operationId: getBusinessFinanceSummary
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Sandbox finance summary,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/FinanceSummary" } },
+              },
+          }
+  /business/finance/ledger:
+    get:
+      tags: [Finance]
+      operationId: listBusinessLedger
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Balanced ledger transactions,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /business/finance/payments:
+    get:
+      tags: [Finance]
+      operationId: listBusinessPayments
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Tenant payment attempts,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /business/finance/payouts:
+    get:
+      tags: [Finance]
+      operationId: listBusinessPayouts
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Sandbox payouts,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Finance]
+      operationId: requestManualPayout
+      parameters:
+        - {
+            name: Idempotency-Key,
+            in: header,
+            required: true,
+            schema: { type: string },
+          }
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [tenantId],
+                    properties: { tenantId: { $ref: "#/components/schemas/PublicId" } },
+                  },
+              },
+          }
+      responses:
+        "201":
+          {
+            description: Payout reserved,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/finance/settings:
+    get:
+      tags: [Finance]
+      operationId: getTenantFinanceSettings
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Tenant finance settings,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+    put:
+      tags: [Finance]
+      operationId: updateTenantFinanceSettings
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { type: object, additionalProperties: true } } }
+      responses:
+        "204": { description: Settings updated. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/finance/export:
+    get:
+      tags: [Finance]
+      operationId: exportBusinessFinance
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - {
+            name: dataset,
+            in: query,
+            required: true,
+            schema:
+              {
+                type: string,
+                enum:
+                  [
+                    bookings,
+                    payments,
+                    refunds,
+                    payouts,
+                    promotions,
+                    staff-activity,
+                    offline-bookings,
+                  ],
+              },
+          }
+        - {
+            name: format,
+            in: query,
+            required: true,
+            schema: { type: string, enum: [csv, xlsx] },
+          }
+      responses:
+        "200":
+          {
+            description: CSV or XLSX export,
+            content:
+              {
+                application/octet-stream: { schema: { type: string, format: binary } },
+              },
+          }
+  /business/promotions:
+    get:
+      tags: [Finance]
+      operationId: listBusinessPromotions
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Promotions,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Finance]
+      operationId: createBusinessPromotion
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              { schema: { $ref: "#/components/schemas/PromotionInput" } },
+          }
+      responses:
+        "201":
+          {
+            description: Promotion created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/commission-configs:
+    get:
+      tags: [Finance]
+      operationId: listCommissionConfigs
+      responses:
+        "200":
+          {
+            description: Versioned commission config,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Finance]
+      operationId: createCommissionConfig
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              { schema: { $ref: "#/components/schemas/CommissionConfigInput" } },
+          }
+      responses:
+        "201":
+          {
+            description: Commission config created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/promotions:
+    get:
+      tags: [Finance]
+      operationId: listAdminPromotions
+      responses:
+        "200":
+          {
+            description: Platform and tenant promotions,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Finance]
+      operationId: createAdminPromotion
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              { schema: { $ref: "#/components/schemas/PromotionInput" } },
+          }
+      responses:
+        "201":
+          {
+            description: Platform promotion created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/finance/ledger:
+    get:
+      tags: [Finance]
+      operationId: listAdminLedger
+      responses:
+        "200":
+          {
+            description: Platform ledger view,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/payouts:
+    get:
+      tags: [Finance]
+      operationId: listAdminPayouts
+      responses:
+        "200":
+          {
+            description: Sandbox payout batches,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/payouts/{payoutId}:
+    patch:
+      tags: [Finance]
+      operationId: updateAdminPayout
+      parameters:
+        - {
+            name: payoutId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Payout status updated. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/tenants/{tenantId}/finance-settings:
+    put:
+      tags: [Finance]
+      operationId: updateAdminTenantFinanceSettings
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Tenant minimum payout updated. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /bookings/{bookingId}/cancel:
+    post:
+      tags: [Bookings]
+      operationId: cancelCustomerBooking
+      parameters:
+        - {
+            name: bookingId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/BookingReference" },
+          }
+        - {
+            name: Idempotency-Key,
+            in: header,
+            required: true,
+            schema: { type: string },
+          }
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [reason],
+                    properties: { reason: { type: string } },
+                  },
+              },
+          }
+      responses:
+        "200":
+          {
+            description: Cancellation decision,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /bookings/{bookingId}/reschedule:
+    post:
+      tags: [Bookings]
+      operationId: rescheduleCustomerBooking
+      parameters:
+        - {
+            name: bookingId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/BookingReference" },
+          }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [newSlotIds],
+                    properties:
+                      {
+                        newSlotIds:
+                          {
+                            type: array,
+                            items: { $ref: "#/components/schemas/PublicId" },
+                          },
+                      },
+                  },
+              },
+          }
+      responses:
+        "204": { description: Reschedule created or awaiting price adjustment. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/refunds:
+    get:
+      tags: [Finance]
+      operationId: listBusinessRefunds
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Tenant refunds,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /business/bookings/{bookingId}/refunds:
+    post:
+      tags: [Finance]
+      operationId: requestBusinessRefund
+      parameters:
+        - {
+            name: bookingId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/BookingReference" },
+          }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201":
+          {
+            description: Refund request created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/refunds:
+    get:
+      tags: [Finance]
+      operationId: listAdminRefunds
+      responses:
+        "200":
+          {
+            description: Platform refunds,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/refunds/{refundId}/decision:
+    post:
+      tags: [Finance]
+      operationId: decideAdminRefund
+      parameters:
+        - {
+            name: refundId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Refund decision recorded. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/refunds/{refundId}/retry:
+    post:
+      tags: [Finance]
+      operationId: retryAdminRefund
+      parameters:
+        - {
+            name: refundId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: Failed refund queued again. }
+  /cancellation-policies:
+    get:
+      tags: [Finance]
+      operationId: listCancellationPolicies
+      responses:
+        "200":
+          {
+            description: Cancellation policy templates,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/cancellation-policies:
+    post:
+      tags: [Finance]
+      operationId: createCancellationPolicy
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201":
+          {
+            description: Policy template created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/venues/{venueId}/cancellation-policy:
+    put:
+      tags: [Finance]
+      operationId: assignVenueCancellationPolicy
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Venue policy assigned. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /notifications/preferences:
+    get:
+      tags: [Auth]
+      operationId: listNotificationPreferences
+      responses:
+        "200":
+          {
+            description: User notification preferences,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    put:
+      tags: [Auth]
+      operationId: updateNotificationPreference
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Preference updated. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /notifications/reminder-options:
+    get:
+      tags: [Auth]
+      operationId: listNotificationReminderOptions
+      responses:
+        "200":
+          {
+            description: Active reminder options,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/notification-reminder-options:
+    post:
+      tags: [Auth]
+      operationId: createNotificationReminderOption
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201":
+          {
+            description: Reminder option created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/venues/{venueId}/reminders:
+    put:
+      tags: [Auth]
+      operationId: updateVenueReminders
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Venue reminder selections replaced. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /venues/{venueId}/reviews:
+    get:
+      tags: [Reviews]
+      operationId: listVenueReviews
+      parameters:
+        - {
+            name: venueId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Visible venue reviews,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /bookings/{bookingId}/review:
+    post:
+      tags: [Reviews]
+      operationId: createBookingReview
+      parameters:
+        - {
+            name: bookingId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/BookingReference" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201":
+          {
+            description: Review created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /reviews/{reviewId}:
+    patch:
+      tags: [Reviews]
+      operationId: updateCustomerReview
+      parameters:
+        - {
+            name: reviewId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Review updated within seven-day window. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /reviews/{reviewId}/report:
+    post:
+      tags: [Reviews]
+      operationId: reportCustomerReview
+      parameters:
+        - {
+            name: reviewId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Review report recorded. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/reviews:
+    get:
+      tags: [Reviews]
+      operationId: listBusinessReviews
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Tenant review management,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /business/reviews/{reviewId}/reply:
+    post:
+      tags: [Reviews]
+      operationId: replyBusinessReview
+      parameters:
+        - {
+            name: reviewId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201": { description: Owner reply recorded. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/reviews:
+    get:
+      tags: [Reviews]
+      operationId: listAdminReviews
+      responses:
+        "200":
+          {
+            description: Platform review moderation queue,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/reviews/{reviewId}/moderate:
+    post:
+      tags: [Reviews]
+      operationId: moderateAdminReview
+      parameters:
+        - {
+            name: reviewId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Review visibility updated with reason. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /support/tickets:
+    get:
+      tags: [Support]
+      operationId: listCustomerSupportTickets
+      responses:
+        "200":
+          {
+            description: Customer tickets,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Support]
+      operationId: createCustomerSupportTicket
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201":
+          {
+            description: Ticket created,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/B2Object" } },
+              },
+          }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /support/tickets/{ticketCode}/messages:
+    get:
+      tags: [Support]
+      operationId: listCustomerSupportMessages
+      parameters:
+        - { name: ticketCode, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          {
+            description: Customer-owned ticket thread,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Support]
+      operationId: createCustomerSupportMessage
+      parameters:
+        - { name: ticketCode, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201": { description: Customer message recorded. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /business/support:
+    get:
+      tags: [Support]
+      operationId: listBusinessSupportTickets
+      parameters:
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Tenant support tickets,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /business/support/{ticketId}/messages:
+    get:
+      tags: [Support]
+      operationId: listBusinessSupportMessages
+      parameters:
+        - {
+            name: ticketId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+        - {
+            name: tenantId,
+            in: query,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Tenant-scoped ticket thread,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Support]
+      operationId: createBusinessSupportMessage
+      parameters:
+        - {
+            name: ticketId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201": { description: Tenant message recorded. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/support:
+    get:
+      tags: [Support]
+      operationId: listAdminSupportTickets
+      responses:
+        "200":
+          {
+            description: Platform support tickets,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+  /admin/support/{ticketId}:
+    patch:
+      tags: [Support]
+      operationId: updateAdminSupportTicket
+      parameters:
+        - {
+            name: ticketId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "204": { description: Assignment, status, or resolution updated. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /admin/support/{ticketId}/messages:
+    get:
+      tags: [Support]
+      operationId: listAdminSupportMessages
+      parameters:
+        - {
+            name: ticketId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      responses:
+        "200":
+          {
+            description: Platform ticket thread,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/B2List" } } },
+          }
+    post:
+      tags: [Support]
+      operationId: createAdminSupportMessage
+      parameters:
+        - {
+            name: ticketId,
+            in: path,
+            required: true,
+            schema: { $ref: "#/components/schemas/PublicId" },
+          }
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/B2Object" } } }
+      responses:
+        "201": { description: Admin message recorded. }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 components:
   parameters:
     Cursor:
@@ -1449,6 +2544,144 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ApiError" }
   schemas:
+    B2Object:
+      type: object
+      additionalProperties: true
+    B2List:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/B2Object" }
+    PromotionInput:
+      type: object
+      required:
+        [code, name, discountType, discountValue, startsAt, endsAt, fundingSource]
+      properties:
+        tenantId: { type: [string, "null"] }
+        code: { type: string, minLength: 2, maxLength: 40 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        description: { type: string, maxLength: 500 }
+        discountType: { type: string, enum: [PERCENT, FIXED] }
+        discountValue: { type: integer, minimum: 1 }
+        minimumAmount: { type: integer, minimum: 0 }
+        maximumDiscount: { type: integer, minimum: 1 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        startsAtTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$" }
+        endsAtTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$" }
+        quota: { type: integer, minimum: 1 }
+        perUserLimit: { type: integer, minimum: 1, maximum: 100 }
+        firstBookingOnly: { type: boolean }
+        paymentMethod: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
+        fundingSource: { type: string, enum: [OWNER, PLATFORM] }
+        budgetAmount: { type: integer, minimum: 1 }
+        scopes:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required: [type, referenceId]
+            properties:
+              type: { type: string, enum: [VENUE, SPORT, COURT] }
+              referenceId: { $ref: "#/components/schemas/PublicId" }
+    CommissionConfigInput:
+      type: object
+      required: [tenantId, rateBasisPoints, effectiveFrom, gatewayFeeFunding, reason]
+      properties:
+        tenantId: { type: [string, "null"] }
+        rateBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: string, format: date-time }
+        trialDays: { type: integer, minimum: 1 }
+        trialCompletedBookingLimit: { type: integer, minimum: 1 }
+        gatewayFeeFunding: { type: string, enum: [OWNER, PLATFORM] }
+        gatewayFeeBasisPoints:
+          { type: integer, minimum: 0, maximum: 10000, default: 250 }
+        subsidyBudget: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    TenantRole:
+      type: object
+      required: [id, name, templateCode, immutable, permissions]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string }
+        templateCode: { type: [string, "null"] }
+        immutable: { type: boolean }
+        permissions:
+          type: array
+          items: { type: string }
+    FinanceSummary:
+      type: object
+      required:
+        [
+          sandbox,
+          grossRevenue,
+          onlineRevenue,
+          offlineRevenue,
+          totalPaid,
+          balanceDue,
+          discounts,
+          commission,
+          refunds,
+          pendingBalance,
+          availableBalance,
+          paidOut,
+          netOwnerRevenue,
+          dpPaid,
+          cashRevenue,
+          gatewayFees,
+          heldBalance,
+          trends,
+          venueComparison,
+          courtComparison,
+        ]
+      properties:
+        sandbox: { type: boolean, const: true }
+        grossRevenue: { type: integer }
+        onlineRevenue: { type: integer }
+        offlineRevenue: { type: integer }
+        totalPaid: { type: integer }
+        balanceDue: { type: integer }
+        discounts: { type: integer }
+        commission: { type: integer }
+        refunds: { type: integer }
+        pendingBalance: { type: integer }
+        availableBalance: { type: integer }
+        paidOut: { type: integer }
+        netOwnerRevenue: { type: integer }
+        dpPaid: { type: integer }
+        cashRevenue: { type: integer }
+        gatewayFees: { type: integer }
+        heldBalance: { type: integer }
+        trends:
+          type: array
+          items:
+            type: object
+            required: [date, paid]
+            properties:
+              date: { type: string, format: date }
+              paid: { type: integer }
+        venueComparison:
+          type: array
+          items:
+            type: object
+            required: [venueId, name, paid]
+            properties:
+              venueId: { $ref: "#/components/schemas/PublicId" }
+              name: { type: string }
+              paid: { type: integer }
+        courtComparison:
+          type: array
+          items:
+            type: object
+            required: [courtId, name, venueName, paid]
+            properties:
+              courtId: { $ref: "#/components/schemas/PublicId" }
+              name: { type: string }
+              venueName: { type: string }
+              paid: { type: integer }
     PublicId:
       type: string
       pattern: "^[A-Za-z0-9_-]{22}$"
@@ -1504,10 +2737,18 @@ components:
           type: array
           items:
             type: object
-            required: [tenantId, role]
+            required: [tenantId, role, tenantRoleId, tenantRoleName, permissions]
             properties:
               tenantId: { $ref: "#/components/schemas/PublicId" }
               role: { type: string, enum: [PRIMARY_OWNER, OWNER, STAFF] }
+              tenantRoleId:
+                oneOf:
+                  - $ref: "#/components/schemas/PublicId"
+                  - type: "null"
+              tenantRoleName: { type: [string, "null"] }
+              permissions:
+                type: array
+                items: { type: string }
         platformAdmin:
           type: boolean
     AccountNotification:
@@ -1536,7 +2777,19 @@ components:
           items: { $ref: "#/components/schemas/PublicId" }
     WorkspaceMember:
       type: object
-      required: [membershipId, userId, name, email, role, status, assignedVenueIds]
+      required:
+        [
+          membershipId,
+          userId,
+          name,
+          email,
+          role,
+          status,
+          assignedVenueIds,
+          tenantRoleId,
+          tenantRoleName,
+          permissions,
+        ]
       properties:
         membershipId: { $ref: "#/components/schemas/PublicId" }
         userId: { $ref: "#/components/schemas/PublicId" }
@@ -1544,6 +2797,14 @@ components:
         email: { type: string, format: email }
         role: { type: string, enum: [PRIMARY_OWNER, OWNER, STAFF] }
         status: { type: string }
+        tenantRoleId:
+          oneOf:
+            - $ref: "#/components/schemas/PublicId"
+            - type: "null"
+        tenantRoleName: { type: [string, "null"] }
+        permissions:
+          type: array
+          items: { type: string }
         assignedVenueIds:
           type: array
           items: { $ref: "#/components/schemas/PublicId" }
@@ -1838,12 +3099,17 @@ components:
       allOf:
         - $ref: "#/components/schemas/Booking"
         - type: object
-          required: [venueName, courtName, startsAt, endsAt]
+          required: [venueName, courtId, courtName, startsAt, endsAt, reviewId]
           properties:
             venueName: { type: string }
+            courtId: { $ref: "#/components/schemas/PublicId" }
             courtName: { type: string }
             startsAt: { type: string, format: date-time }
             endsAt: { type: string, format: date-time }
+            reviewId:
+              anyOf:
+                - $ref: "#/components/schemas/PublicId"
+                - type: "null"
     PricingPreviewInput:
       type: object
       required: [tenantId, venueId, courtId, samples]
@@ -2322,6 +3588,7 @@ components:
           maxItems: 10
           items: { type: string }
         paymentMode: { type: string, enum: [FULL, DP, PAY_AT_VENUE] }
+        promotionCode: { type: string, minLength: 1, maxLength: 40 }
     Booking:
       type: object
       required:

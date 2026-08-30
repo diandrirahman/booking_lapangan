@@ -16,6 +16,7 @@ const createSchema = z.object({
   courtId: publicIdSchema,
   slotIds: z.array(publicIdSchema).min(1).max(6),
   addonIds: z.array(publicIdSchema).max(10).default([]),
+  promotionCode: z.string().trim().min(1).max(40).optional(),
   paymentMode: paymentModeSchema,
 });
 const offlineSchema = createSchema.extend({
@@ -76,13 +77,19 @@ export function createBookingRouter(
     asyncHandler(async (request, response) => {
       const idempotencyKey = requireIdempotencyKey(request.header("Idempotency-Key"));
       const input = offlineSchema.parse(request.body);
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "bookings.manage",
         input.venueId,
       );
       if (input.customer.adjustedAmount !== undefined) {
-        await authorization.requireOwner(request.auth!.userId, input.tenantId);
+        await authorization.requirePermission(
+          request.auth!.userId,
+          input.tenantId,
+          "pricing.manage",
+          input.venueId,
+        );
       }
       const booking = await service.create(
         {
@@ -104,9 +111,10 @@ export function createBookingRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = transitionSchema.parse(request.body);
-      await authorization.requireVenueAccess(
+      await authorization.requirePermission(
         request.auth!.userId,
         input.tenantId,
+        "bookings.manage",
         input.venueId,
       );
       const bookingReference = bookingReferenceSchema.parse(request.params.bookingId);

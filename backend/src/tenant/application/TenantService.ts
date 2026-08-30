@@ -1,16 +1,21 @@
 import { randomBytes } from "node:crypto";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import type { DatabaseConnection } from "../../database/client.js";
 import { formatPublicId, parsePublicId } from "../../database/ids.js";
 import {
   auditLogs,
   memberVenueAssignments,
+  permissions,
+  rolePermissions,
   tenantMemberships,
+  tenantRoles,
   tenants,
   users,
   venues,
 } from "../../database/schema/index.js";
 import { ApiError } from "../../http/ApiError.js";
+import type { RequestAuditContext } from "../../http/requestAuditContext.js";
+import { PERMISSION_CODES, type PermissionCode } from "../authorization/permissions.js";
 
 export interface WorkspaceSummary {
   tenantId: string;
@@ -30,6 +35,17 @@ export interface WorkspaceMember {
   role: "PRIMARY_OWNER" | "OWNER" | "STAFF";
   status: string;
   assignedVenueIds: string[];
+  tenantRoleId: string | null;
+  tenantRoleName: string | null;
+  permissions: PermissionCode[];
+}
+
+export interface TenantRoleView {
+  id: string;
+  name: string;
+  templateCode: string | null;
+  immutable: boolean;
+  permissions: PermissionCode[];
 }
 
 export class TenantService {
@@ -44,9 +60,12 @@ export class TenantService {
         slug: tenants.slug,
         status: tenants.status,
         role: tenantMemberships.role,
+        tenantRoleId: tenantMemberships.tenantRoleId,
+        tenantRoleName: tenantRoles.name,
       })
       .from(tenantMemberships)
       .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
+      .leftJoin(tenantRoles, eq(tenantRoles.id, tenantMemberships.tenantRoleId))
       .where(
         and(
           eq(tenantMemberships.userId, parsePublicId(userId)),
@@ -134,9 +153,12 @@ export class TenantService {
         email: users.email,
         role: tenantMemberships.role,
         status: tenantMemberships.status,
+        tenantRoleId: tenantMemberships.tenantRoleId,
+        tenantRoleName: tenantRoles.name,
       })
       .from(tenantMemberships)
       .innerJoin(users, eq(users.id, tenantMemberships.userId))
+      .leftJoin(tenantRoles, eq(tenantRoles.id, tenantMemberships.tenantRoleId))
       .where(eq(tenantMemberships.tenantId, tenantDatabaseId))
       .orderBy(asc(users.name));
     const membershipIds = memberships.map((membership) => membership.membershipId);
@@ -147,6 +169,16 @@ export class TenantService {
             .select()
             .from(memberVenueAssignments)
             .where(inArray(memberVenueAssignments.membershipId, membershipIds));
+    const tenantRoleIds = memberships.flatMap((membership) =>
+      membership.tenantRoleId === null ? [] : [membership.tenantRoleId],
+    );
+    const assignedPermissions =
+      tenantRoleIds.length === 0
+        ? []
+        : await this.database.db
+            .select()
+            .from(rolePermissions)
+            .where(inArray(rolePermissions.roleId, tenantRoleIds));
 
     return memberships.filter(hasBusinessRole).map((membership) => ({
       membershipId: formatPublicId(membership.membershipId),
@@ -158,7 +190,234 @@ export class TenantService {
       assignedVenueIds: assignments
         .filter((assignment) => assignment.membershipId === membership.membershipId)
         .map((assignment) => formatPublicId(assignment.venueId)),
+      tenantRoleId:
+        membership.tenantRoleId === null
+          ? null
+          : formatPublicId(membership.tenantRoleId),
+      tenantRoleName: membership.tenantRoleName,
+      permissions: assignedPermissions
+        .filter((permission) => permission.roleId === membership.tenantRoleId)
+        .map((permission) => permission.permissionCode)
+        .filter(isPermissionCode),
     }));
+  }
+
+  async listRoleTemplates(): Promise<TenantRoleView[]> {
+    return this.listRolesWhere(isNull(tenantRoles.tenantId));
+  }
+
+  async listTenantRoles(tenantId: string): Promise<TenantRoleView[]> {
+    return this.listRolesWhere(eq(tenantRoles.tenantId, parsePublicId(tenantId)));
+  }
+
+  private async listRolesWhere(condition: SQL): Promise<TenantRoleView[]> {
+    const roles = await this.database.db
+      .select()
+      .from(tenantRoles)
+      .where(condition)
+      .orderBy(asc(tenantRoles.name));
+    const roleIds = roles.map((role) => role.id);
+    const permissionRows =
+      roleIds.length === 0
+        ? []
+        : await this.database.db
+            .select()
+            .from(rolePermissions)
+            .where(inArray(rolePermissions.roleId, roleIds));
+    return roles.map((role) => ({
+      id: formatPublicId(role.id),
+      name: role.name,
+      templateCode: role.templateCode,
+      immutable: role.immutable,
+      permissions: permissionRows
+        .filter((permission) => permission.roleId === role.id)
+        .map((permission) => permission.permissionCode)
+        .filter(isPermissionCode),
+    }));
+  }
+
+  async copyRoleTemplate(
+    tenantId: string,
+    templateId: string,
+    name: string,
+    actorUserId: string,
+    reason: string,
+    audit: RequestAuditContext,
+  ): Promise<{ id: string }> {
+    const tenantDatabaseId = parsePublicId(tenantId);
+    return this.database.db.transaction(async (transaction) => {
+      const [template] = await transaction
+        .select()
+        .from(tenantRoles)
+        .where(
+          and(
+            eq(tenantRoles.id, parsePublicId(templateId)),
+            isNull(tenantRoles.tenantId),
+            eq(tenantRoles.immutable, true),
+          ),
+        )
+        .limit(1);
+      if (!template) {
+        throw new ApiError(
+          404,
+          "ROLE_TEMPLATE_NOT_FOUND",
+          "Template role tidak ditemukan.",
+        );
+      }
+      const [created] = await transaction
+        .insert(tenantRoles)
+        .values({ tenantId: tenantDatabaseId, name, immutable: false })
+        .$returningId();
+      if (!created) throw new Error("MySQL tidak mengembalikan ID role.");
+      const templatePermissions = await transaction
+        .select()
+        .from(rolePermissions)
+        .where(eq(rolePermissions.roleId, template.id));
+      if (templatePermissions.length > 0) {
+        await transaction.insert(rolePermissions).values(
+          templatePermissions.map((permission) => ({
+            roleId: created.id,
+            permissionCode: permission.permissionCode,
+          })),
+        );
+      }
+      await transaction.insert(auditLogs).values({
+        tenantId: tenantDatabaseId,
+        actorUserId: parsePublicId(actorUserId),
+        action: "tenant.role_created",
+        resourceType: "tenant_role",
+        resourceId: created.id,
+        reason,
+        afterState: { name, templateCode: template.templateCode },
+        ...audit,
+      });
+      return { id: formatPublicId(created.id) };
+    });
+  }
+
+  async updateRolePermissions(
+    tenantId: string,
+    roleId: string,
+    permissionCodes: PermissionCode[],
+    actorUserId: string,
+    reason: string,
+    audit: RequestAuditContext,
+  ): Promise<void> {
+    const tenantDatabaseId = parsePublicId(tenantId);
+    const roleDatabaseId = parsePublicId(roleId);
+    await this.database.db.transaction(async (transaction) => {
+      const [role] = await transaction
+        .select()
+        .from(tenantRoles)
+        .where(
+          and(
+            eq(tenantRoles.id, roleDatabaseId),
+            eq(tenantRoles.tenantId, tenantDatabaseId),
+            eq(tenantRoles.immutable, false),
+          ),
+        )
+        .limit(1)
+        .for("update");
+      if (!role)
+        throw new ApiError(
+          404,
+          "TENANT_ROLE_NOT_FOUND",
+          "Role tenant tidak ditemukan.",
+        );
+      const before = await transaction
+        .select({ code: rolePermissions.permissionCode })
+        .from(rolePermissions)
+        .where(eq(rolePermissions.roleId, roleDatabaseId));
+      const valid = await transaction
+        .select({ code: permissions.code })
+        .from(permissions)
+        .where(inArray(permissions.code, permissionCodes));
+      if (valid.length !== new Set(permissionCodes).size) {
+        throw new ApiError(422, "PERMISSION_INVALID", "Permission tidak dikenali.");
+      }
+      await transaction
+        .delete(rolePermissions)
+        .where(eq(rolePermissions.roleId, roleDatabaseId));
+      if (permissionCodes.length > 0) {
+        await transaction.insert(rolePermissions).values(
+          permissionCodes.map((permissionCode) => ({
+            roleId: roleDatabaseId,
+            permissionCode,
+          })),
+        );
+      }
+      await transaction.insert(auditLogs).values({
+        tenantId: tenantDatabaseId,
+        actorUserId: parsePublicId(actorUserId),
+        action: "tenant.role_permissions_updated",
+        resourceType: "tenant_role",
+        resourceId: roleDatabaseId,
+        reason,
+        beforeState: { permissions: before.map((item) => item.code) },
+        afterState: { permissions: permissionCodes },
+        ...audit,
+      });
+    });
+  }
+
+  async assignTenantRole(
+    tenantId: string,
+    membershipId: string,
+    roleId: string,
+    actorUserId: string,
+    reason: string,
+    audit: RequestAuditContext,
+  ): Promise<void> {
+    const tenantDatabaseId = parsePublicId(tenantId);
+    const membershipDatabaseId = parsePublicId(membershipId);
+    const roleDatabaseId = parsePublicId(roleId);
+    await this.database.db.transaction(async (transaction) => {
+      const [role] = await transaction
+        .select({ id: tenantRoles.id })
+        .from(tenantRoles)
+        .where(
+          and(
+            eq(tenantRoles.id, roleDatabaseId),
+            eq(tenantRoles.tenantId, tenantDatabaseId),
+          ),
+        )
+        .limit(1);
+      if (!role)
+        throw new ApiError(
+          404,
+          "TENANT_ROLE_NOT_FOUND",
+          "Role tenant tidak ditemukan.",
+        );
+      const [membership] = await transaction
+        .select({ roleId: tenantMemberships.tenantRoleId })
+        .from(tenantMemberships)
+        .where(
+          and(
+            eq(tenantMemberships.id, membershipDatabaseId),
+            eq(tenantMemberships.tenantId, tenantDatabaseId),
+            eq(tenantMemberships.role, "STAFF"),
+          ),
+        )
+        .limit(1)
+        .for("update");
+      if (!membership)
+        throw new ApiError(404, "STAFF_MEMBERSHIP_NOT_FOUND", "Staff tidak ditemukan.");
+      await transaction
+        .update(tenantMemberships)
+        .set({ tenantRoleId: roleDatabaseId, updatedAt: new Date() })
+        .where(eq(tenantMemberships.id, membershipDatabaseId));
+      await transaction.insert(auditLogs).values({
+        tenantId: tenantDatabaseId,
+        actorUserId: parsePublicId(actorUserId),
+        action: "tenant.member_role_assigned",
+        resourceType: "tenant_membership",
+        resourceId: membershipDatabaseId,
+        reason,
+        beforeState: { tenantRoleId: membership.roleId },
+        afterState: { tenantRoleId: roleDatabaseId },
+        ...audit,
+      });
+    });
   }
 
   async addMember(
@@ -213,6 +472,9 @@ export class TenantService {
     tenantId: string,
     membershipId: string,
     venueIds: string[],
+    actorUserId: string,
+    reason: string,
+    audit: RequestAuditContext,
   ): Promise<void> {
     const tenantDatabaseId = parsePublicId(tenantId);
     const membershipDatabaseId = parsePublicId(membershipId);
@@ -260,6 +522,11 @@ export class TenantService {
         );
       }
 
+      const previousAssignments = await transaction
+        .select({ venueId: memberVenueAssignments.venueId })
+        .from(memberVenueAssignments)
+        .where(eq(memberVenueAssignments.membershipId, membershipDatabaseId));
+
       await transaction
         .delete(memberVenueAssignments)
         .where(eq(memberVenueAssignments.membershipId, membershipDatabaseId));
@@ -271,6 +538,17 @@ export class TenantService {
           })),
         );
       }
+      await transaction.insert(auditLogs).values({
+        tenantId: tenantDatabaseId,
+        actorUserId: parsePublicId(actorUserId),
+        action: "tenant.member_venues_assigned",
+        resourceType: "tenant_membership",
+        resourceId: membershipDatabaseId,
+        reason,
+        beforeState: { venueIds: previousAssignments.map((item) => item.venueId) },
+        afterState: { venueIds: venueDatabaseIds },
+        ...audit,
+      });
     });
   }
 
@@ -356,6 +634,10 @@ export class TenantService {
       });
     });
   }
+}
+
+function isPermissionCode(value: string): value is PermissionCode {
+  return (PERMISSION_CODES as readonly string[]).includes(value);
 }
 
 function hasBusinessRole<T extends { role: string }>(

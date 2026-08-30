@@ -102,7 +102,12 @@ export function createPricingRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = createRuleSchema.parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "pricing.manage",
+        input.venueId,
+      );
       response.status(201).json(await service.createRule(input));
     }),
   );
@@ -111,7 +116,12 @@ export function createPricingRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const input = previewSchema.parse(request.body);
-      await authorization.requireOwner(request.auth!.userId, input.tenantId);
+      await authorization.requirePermission(
+        request.auth!.userId,
+        input.tenantId,
+        "pricing.manage",
+        input.venueId,
+      );
       if (
         input.candidate &&
         (input.candidate.tenantId !== input.tenantId ||

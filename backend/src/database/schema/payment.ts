@@ -99,10 +99,19 @@ export const refunds = mysqlTable(
     ),
     amount: bigint("amount", { mode: "number", unsigned: true }).notNull(),
     status: varchar("status", { length: 20 }).notNull(),
+    decisionStatus: varchar("decision_status", { length: 20 })
+      .notNull()
+      .default("APPROVED"),
     kind: varchar("kind", { length: 24 }).notNull(),
     reason: text("reason").notNull(),
     idempotencyKey: varchar("idempotency_key", { length: 100 }).notNull(),
     requestedByUserId: bigReference("requested_by_user_id").references(() => users.id),
+    decidedByUserId: bigReference("decided_by_user_id").references(() => users.id),
+    decidedAt: datetime("decided_at", { mode: "date", fsp: 3 }),
+    executionAttempts: bigint("execution_attempts", { mode: "number", unsigned: true })
+      .notNull()
+      .default(0),
+    failureReason: text("failure_reason"),
     providerReference: varchar("provider_reference", { length: 100 }),
     createdAt: datetime("created_at", { mode: "date", fsp: 3 })
       .notNull()

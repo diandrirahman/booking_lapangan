@@ -3,18 +3,21 @@ import type { DatabaseConnection } from "../../database/client.js";
 import { formatPublicId, parsePublicId } from "../../database/ids.js";
 import {
   memberVenueAssignments,
+  rolePermissions,
   platformAdmins,
   tenantMemberships,
   venues,
 } from "../../database/schema/index.js";
 import { ApiError } from "../../http/ApiError.js";
 import type { BusinessRole } from "../../identity/auth/domain.js";
+import { PERMISSION_CODES, type PermissionCode } from "./permissions.js";
 
 export interface TenantAccess {
   membershipId: string;
   tenantId: string;
   role: BusinessRole;
   assignedVenueIds: string[];
+  permissions: PermissionCode[];
 }
 
 export class TenantAuthorizationService {
@@ -25,6 +28,7 @@ export class TenantAuthorizationService {
       .select({
         id: tenantMemberships.id,
         role: tenantMemberships.role,
+        tenantRoleId: tenantMemberships.tenantRoleId,
       })
       .from(tenantMemberships)
       .where(
@@ -48,6 +52,13 @@ export class TenantAuthorizationService {
       .select({ venueId: memberVenueAssignments.venueId })
       .from(memberVenueAssignments)
       .where(eq(memberVenueAssignments.membershipId, membership.id));
+    const permissionRows =
+      membership.role !== "STAFF" || membership.tenantRoleId === null
+        ? []
+        : await this.database.db
+            .select({ code: rolePermissions.permissionCode })
+            .from(rolePermissions)
+            .where(eq(rolePermissions.roleId, membership.tenantRoleId));
 
     return {
       membershipId: formatPublicId(membership.id),
@@ -56,6 +67,10 @@ export class TenantAuthorizationService {
       assignedVenueIds: assignments.map((assignment) =>
         formatPublicId(assignment.venueId),
       ),
+      permissions:
+        membership.role === "STAFF"
+          ? permissionRows.map((row) => row.code).filter(isPermissionCode)
+          : [...PERMISSION_CODES],
     };
   }
 
@@ -106,6 +121,37 @@ export class TenantAuthorizationService {
     return access;
   }
 
+  async requirePrimaryOwner(userId: string, tenantId: string): Promise<TenantAccess> {
+    const access = await this.requireTenantAccess(userId, tenantId);
+    if (access.role !== "PRIMARY_OWNER") {
+      throw new ApiError(
+        403,
+        "PRIMARY_OWNER_REQUIRED",
+        "Aksi ini hanya tersedia untuk Primary Owner.",
+      );
+    }
+    return access;
+  }
+
+  async requirePermission(
+    userId: string,
+    tenantId: string,
+    permission: PermissionCode,
+    venueId?: string,
+  ): Promise<TenantAccess> {
+    const access = venueId
+      ? await this.requireVenueAccess(userId, tenantId, venueId)
+      : await this.requireTenantAccess(userId, tenantId);
+    if (!access.permissions.includes(permission)) {
+      throw new ApiError(
+        403,
+        "PERMISSION_REQUIRED",
+        "Role Anda tidak memiliki permission untuk aksi ini.",
+      );
+    }
+    return access;
+  }
+
   async requirePlatformAdmin(userId: string): Promise<void> {
     const [admin] = await this.database.db
       .select({ id: platformAdmins.id })
@@ -125,6 +171,10 @@ export class TenantAuthorizationService {
       );
     }
   }
+}
+
+function isPermissionCode(value: string): value is PermissionCode {
+  return (PERMISSION_CODES as readonly string[]).includes(value);
 }
 
 function isBusinessRole(value: string): value is BusinessRole {

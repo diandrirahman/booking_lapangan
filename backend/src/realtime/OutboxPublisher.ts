@@ -11,6 +11,7 @@ export interface RealtimeEvent {
   eventType: string;
   resource: { type: string; id: string };
   tenantId: string | null;
+  audienceUserId: string | null;
   version: number;
   occurredAt: string;
   hint: unknown;
@@ -65,6 +66,8 @@ function toRealtimeEvent(event: typeof outboxEvents.$inferSelect): RealtimeEvent
     eventType: event.eventType,
     resource: { type: event.resourceType, id: formatPublicId(event.resourceId) },
     tenantId: event.tenantId === null ? null : formatPublicId(event.tenantId),
+    audienceUserId:
+      event.audienceUserId === null ? null : formatPublicId(event.audienceUserId),
     version: event.resourceVersion,
     occurredAt: event.occurredAt.toISOString(),
     hint: event.payload,

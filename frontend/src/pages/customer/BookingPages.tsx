@@ -39,6 +39,7 @@ import {
   Button,
   Card,
   Dialog,
+  EmptyState,
   Input,
   LoadingState,
   PageTitle,
@@ -49,6 +50,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui";
+
+const DEFAULT_RESCHEDULE_DATE = format(
+  new Date(Date.now() + 2 * 86_400_000),
+  "yyyy-MM-dd",
+);
 import {
   calculateCheckoutTotals,
   calculateServerCheckoutPreview,
@@ -1176,24 +1182,75 @@ export function BookingsPage() {
 }
 
 function IntegratedBookingsPage() {
+  const session = useSession();
   const bookings = useQuery({
     queryKey: ["customer", "bookings"],
     queryFn: () => apiClient.listCustomerBookings(),
+    enabled: Boolean(session.data),
   });
+  if (session.isPending) {
+    return (
+      <div className="content-container">
+        <LoadingState
+          title="Memeriksa akun…"
+          description="Menyiapkan daftar booking Anda."
+        />
+      </div>
+    );
+  }
+  if (session.isError && !isAuthenticationRequired(session.error)) {
+    return (
+      <div className="content-container">
+        <EmptyState
+          title="Akun belum dapat diperiksa"
+          description="Terjadi gangguan saat memeriksa sesi Anda. Silakan coba kembali."
+          action={<Button onClick={() => void session.refetch()}>Coba lagi</Button>}
+        />
+      </div>
+    );
+  }
+  if (!session.data) {
+    return (
+      <div className="content-container">
+        <PageTitle
+          eyebrow="Aktivitas"
+          title="Booking Saya"
+          description="Masuk untuk melihat jadwal, pembayaran, dan status booking Anda."
+        />
+        <EmptyState
+          title="Masuk untuk melihat booking"
+          description="Daftar booking tersimpan secara pribadi di akun LapanganGo Anda."
+          action={
+            <Link
+              className="btn btn-primary btn-md"
+              to="/login"
+              state={{ from: "/bookings" }}
+            >
+              Masuk ke akun
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
   if (bookings.isLoading) {
     return (
       <div className="content-container">
-        <Card aria-busy="true">Memuat Booking Saya...</Card>
+        <LoadingState
+          title="Memuat Booking Saya…"
+          description="Mengambil jadwal dan status pembayaran terbaru."
+        />
       </div>
     );
   }
   if (bookings.isError || !bookings.data) {
     return (
       <div className="content-container">
-        <Card>
-          <h2>Booking belum dapat dimuat</h2>
-          <Button onClick={() => void bookings.refetch()}>Coba lagi</Button>
-        </Card>
+        <EmptyState
+          title="Booking belum dapat dimuat"
+          description="Terjadi gangguan saat mengambil booking Anda. Silakan coba kembali."
+          action={<Button onClick={() => void bookings.refetch()}>Coba lagi</Button>}
+        />
       </div>
     );
   }
@@ -1211,7 +1268,7 @@ function IntegratedBookingsPage() {
       <PageTitle
         eyebrow="Aktivitas"
         title="Booking Saya"
-        description="Status, harga, dan saldo berasal dari API B1."
+        description="Pantau jadwal, pembayaran, dan status booking dalam satu tempat."
       />
       <Tabs defaultValue="upcoming">
         <TabsList className="tabs-list">
@@ -1240,17 +1297,24 @@ function CustomerBookingRows({
 }) {
   if (bookings.length === 0)
     return (
-      <Card>
-        <p>Belum ada booking pada kategori ini.</p>
-        <Link className="btn btn-primary btn-md" to="/venues">
-          Cari venue
-        </Link>
-      </Card>
+      <EmptyState
+        title="Belum ada booking"
+        description="Booking pada kategori ini akan muncul di sini."
+        action={
+          <Link className="btn btn-primary btn-md" to="/venues">
+            Cari venue
+          </Link>
+        }
+      />
     );
   return (
-    <div className="booking-list">
+    <div className="booking-list customer-booking-list">
       {bookings.map((booking) => (
-        <Link className="booking-row" key={booking.id} to={`/bookings/${booking.id}`}>
+        <Link
+          className="customer-booking-card"
+          key={booking.id}
+          to={`/bookings/${booking.id}`}
+        >
           <div className="date-tile">
             <strong>{new Date(booking.startsAt).getDate()}</strong>
             <span>
@@ -1259,25 +1323,62 @@ function CustomerBookingRows({
               )}
             </span>
           </div>
-          <div>
-            <Badge tone={booking.status === "CONFIRMED" ? "success" : "warning"}>
-              {booking.status}
+          <div className="customer-booking-copy">
+            <Badge tone={customerBookingStatusTone(booking.status)}>
+              {customerBookingStatusLabel(booking.status)}
             </Badge>
             <h3>{booking.venueName}</h3>
             <p>
-              {booking.courtName} ·{" "}
+              <MapPin /> {booking.courtName}
+            </p>
+            <p>
+              <Clock3 />
               {new Intl.DateTimeFormat("id-ID", {
                 hour: "2-digit",
                 minute: "2-digit",
-              }).format(new Date(booking.startsAt))}
+              }).format(new Date(booking.startsAt))}{" "}
+              –{" "}
+              {new Intl.DateTimeFormat("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(new Date(booking.endsAt))}
             </p>
           </div>
-          <strong>{formatRupiah(booking.totalAmount)}</strong>
-          <ChevronRight />
+          <div className="customer-booking-payment">
+            <span>Total booking</span>
+            <strong>{formatRupiah(booking.totalAmount)}</strong>
+            {booking.balanceDue > 0 && (
+              <small>Sisa {formatRupiah(booking.balanceDue)}</small>
+            )}
+          </div>
+          <span className="customer-booking-chevron" aria-hidden="true">
+            <ChevronRight />
+          </span>
         </Link>
       ))}
     </div>
   );
+}
+
+function customerBookingStatusLabel(status: string) {
+  return (
+    (
+      {
+        HOLD: "Menunggu pembayaran",
+        PENDING_CONFIRMATION: "Menunggu konfirmasi",
+        CONFIRMED: "Terkonfirmasi",
+        COMPLETED: "Selesai",
+        CANCELLED: "Dibatalkan",
+        EXPIRED: "Kedaluwarsa",
+      } as Record<string, string>
+    )[status] ?? status
+  );
+}
+
+function customerBookingStatusTone(status: string): "success" | "warning" | "danger" {
+  if (["CONFIRMED", "COMPLETED"].includes(status)) return "success";
+  if (["CANCELLED", "EXPIRED"].includes(status)) return "danger";
+  return "warning";
 }
 
 function PrototypeBookingsPage() {
@@ -1473,10 +1574,32 @@ function PrototypeBookingDetailPage() {
 function IntegratedBookingDetailPage() {
   const { id } = useParams();
   const venuesQuery = useVenueSearch();
+  const bookingsQuery = useQuery({
+    queryKey: ["customer", "bookings"],
+    queryFn: () => apiClient.listCustomerBookings(),
+  });
+  const [cancelReason, setCancelReason] = useState("");
+  const [rescheduleDate, setRescheduleDate] = useState(DEFAULT_RESCHEDULE_DATE);
+  const [replacementSlots, setReplacementSlots] = useState<string[]>([]);
   const bookingQuery = useQuery({
     queryKey: ["booking", id],
     queryFn: () => apiClient.getBooking(id!),
     enabled: Boolean(id),
+  });
+  const summary = bookingsQuery.data?.items.find((item) => item.id === id);
+  const availability = useQuery({
+    queryKey: ["availability", summary?.courtId, rescheduleDate],
+    queryFn: () => apiClient.getAvailability(summary!.courtId, rescheduleDate),
+    enabled: Boolean(summary?.courtId && rescheduleDate),
+  });
+  const cancel = useMutation({
+    mutationFn: () => apiClient.cancelBooking(id!, cancelReason, crypto.randomUUID()),
+    onSuccess: () => Promise.all([bookingQuery.refetch(), bookingsQuery.refetch()]),
+  });
+  const reschedule = useMutation({
+    mutationFn: () =>
+      apiClient.rescheduleBooking(id!, replacementSlots, crypto.randomUUID()),
+    onSuccess: () => Promise.all([bookingQuery.refetch(), bookingsQuery.refetch()]),
   });
   if (bookingQuery.isError) {
     return (
@@ -1522,9 +1645,95 @@ function IntegratedBookingDetailPage() {
           balance: formatRupiah(booking.balanceDue),
         }}
         actions={
-          <Link className="btn btn-secondary btn-md" to="/bookings">
-            Kembali ke Booking Saya
-          </Link>
+          <>
+            {booking.status === "CONFIRMED" && (
+              <Dialog
+                title="Jadwalkan ulang"
+                description="Satu kali, minimal 24 jam sebelum jadwal. Slot lama tetap aman sampai proses berhasil."
+                trigger={
+                  <Button variant="secondary">
+                    <CalendarDays /> Jadwalkan ulang
+                  </Button>
+                }
+              >
+                <label>
+                  Tanggal baru
+                  <Input
+                    type="date"
+                    value={rescheduleDate}
+                    onChange={(event) => {
+                      setRescheduleDate(event.target.value);
+                      setReplacementSlots([]);
+                    }}
+                  />
+                </label>
+                <div className="slot-grid">
+                  {availability.data?.items
+                    .filter((slot) => slot.status === "AVAILABLE")
+                    .map((slot) => (
+                      <button
+                        type="button"
+                        className={replacementSlots.includes(slot.id) ? "selected" : ""}
+                        key={slot.id}
+                        onClick={() =>
+                          setReplacementSlots((current) =>
+                            current.includes(slot.id)
+                              ? current.filter((item) => item !== slot.id)
+                              : [...current, slot.id],
+                          )
+                        }
+                      >
+                        {new Date(slot.startsAt).toLocaleTimeString("id-ID", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </button>
+                    ))}
+                </div>
+                <Button
+                  disabled={replacementSlots.length === 0 || reschedule.isPending}
+                  onClick={() => reschedule.mutate()}
+                >
+                  Simpan jadwal baru
+                </Button>
+                {reschedule.error && (
+                  <p className="field-error" role="alert">
+                    {reschedule.error.message}
+                  </p>
+                )}
+              </Dialog>
+            )}
+            {["HOLD", "PENDING_CONFIRMATION", "CONFIRMED"].includes(booking.status) && (
+              <Dialog
+                title="Batalkan booking"
+                description="Nilai refund dihitung server dari policy snapshot booking."
+                trigger={<Button variant="ghost">Ajukan pembatalan</Button>}
+              >
+                <label>
+                  Alasan
+                  <textarea
+                    className="input"
+                    value={cancelReason}
+                    onChange={(event) => setCancelReason(event.target.value)}
+                  />
+                </label>
+                <Button
+                  disabled={cancelReason.trim().length < 3 || cancel.isPending}
+                  onClick={() => cancel.mutate()}
+                >
+                  Konfirmasi pembatalan
+                </Button>
+                {cancel.error && (
+                  <p className="field-error" role="alert">
+                    {cancel.error.message}
+                  </p>
+                )}
+              </Dialog>
+            )}
+            <Link className="btn btn-secondary btn-md" to="/bookings">
+              Kembali ke Booking Saya
+            </Link>
+          </>
         }
       />
     </div>

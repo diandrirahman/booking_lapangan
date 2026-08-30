@@ -17,6 +17,7 @@
     "test:watch": "vitest --configLoader runner",
     "test:e2e": "cross-env VITE_SERVER_STATE=off playwright test --config playwright.config.ts",
     "test:e2e:b1": "playwright test --config playwright.b1.config.ts",
+    "test:e2e:b2": "playwright test --config playwright.b2.config.ts",
     "test:manual:b1": "playwright test --config playwright.manual-b1.config.ts",
     "test:ui-audit": "cross-env VITE_SERVER_STATE=off playwright test --config playwright.ui-audit.config.ts",
     "qa": "npm run format:check && npm run lint && npm run type-check && npm run test && npm run build && npm run test:e2e"

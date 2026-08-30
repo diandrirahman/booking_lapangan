@@ -10,6 +10,7 @@ import {
   primaryKey,
   smallint,
   text,
+  time,
   uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
@@ -250,17 +251,68 @@ export const promotions = mysqlTable(
   {
     id: entityId(),
     tenantId: entityReference("tenant_id").references(() => tenants.id),
+    code: varchar("code", { length: 32 }),
     name: varchar("name", { length: 80 }).notNull(),
     description: text("description"),
     status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
     startsAt: datetime("starts_at", { mode: "date" }).notNull(),
     endsAt: datetime("ends_at", { mode: "date" }).notNull(),
+    startsAtTime: time("starts_at_time"),
+    endsAtTime: time("ends_at_time"),
+    discountType: varchar("discount_type", { length: 12 }),
+    discountValue: bigint("discount_value", { mode: "number", unsigned: true }),
+    minimumAmount: bigint("minimum_amount", { mode: "number", unsigned: true })
+      .notNull()
+      .default(0),
+    maximumDiscount: bigint("maximum_discount", {
+      mode: "number",
+      unsigned: true,
+    }),
+    quota: int("quota", { unsigned: true }),
+    quotaUsed: int("quota_used", { unsigned: true }).notNull().default(0),
+    perUserLimit: int("per_user_limit", { unsigned: true }).notNull().default(1),
+    firstBookingOnly: boolean("first_booking_only").notNull().default(false),
+    paymentMethod: varchar("payment_method", { length: 20 }),
+    fundingSource: varchar("funding_source", { length: 16 }),
+    budgetAmount: bigint("budget_amount", { mode: "number", unsigned: true }),
+    budgetUsed: bigint("budget_used", { mode: "number", unsigned: true })
+      .notNull()
+      .default(0),
     discoveryOnly: boolean("discovery_only").notNull().default(true),
     createdAt: datetime("created_at", { mode: "date" })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => [index("promotions_discovery_idx").on(table.status, table.startsAt)],
+  (table) => [
+    uniqueIndex("promotions_code_unique").on(table.code),
+    index("promotions_discovery_idx").on(table.status, table.startsAt),
+  ],
+);
+
+export const promotionRedemptions = mysqlTable(
+  "promotion_redemptions",
+  {
+    id: bigReference("id").autoincrement().primaryKey(),
+    promotionId: entityReference("promotion_id")
+      .notNull()
+      .references(() => promotions.id),
+    bookingId: bigReference("booking_id").notNull(),
+    userId: bigReference("user_id")
+      .notNull()
+      .references(() => users.id),
+    discountAmount: bigint("discount_amount", {
+      mode: "number",
+      unsigned: true,
+    }).notNull(),
+    status: varchar("status", { length: 16 }).notNull(),
+    createdAt: datetime("created_at", { mode: "date", fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    uniqueIndex("promotion_redemption_booking_unique").on(table.bookingId),
+    index("promotion_redemption_user_idx").on(table.promotionId, table.userId),
+  ],
 );
 
 export const promotionScopes = mysqlTable(
