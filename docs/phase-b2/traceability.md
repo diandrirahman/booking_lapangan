@@ -90,3 +90,10 @@ Project Owner. Dependency Medium tetap tercatat sebagai `Accepted Risk`.
 - Retest UI delta: **87 screenshot lulus**.
 - `complete-local`: **43/43**, diterima Project Owner pada 30 Agustus 2026.
 - Scope staging dan provider live tidak dihitung dalam local readiness B2.
+
+## Catatan staging 30 Agustus 2026
+
+Status `complete-local` 43/43 tidak berubah. Deployment dan visual matrix staging
+24/24 lulus, tetapi validasi staging `B2-NOT-001/B2-NOT-003` menemukan
+`B2-NOT-STG-001` Medium/Open: perubahan channel email reminder tidak persisten setelah
+refetch/reload. Staging technical gate tetap terbuka sampai remediation dan retest.

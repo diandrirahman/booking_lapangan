@@ -1,0 +1,191 @@
+{
+  "generatedAt": "2026-08-30T15:30:00.000Z",
+  "environment": {
+    "web": "https://lapangango-b1-staging-web.vercel.app",
+    "api": "https://lapangango-b1-staging-api.vercel.app",
+    "browser": "External Chrome",
+    "sourceCommit": "d93a9f03175b53d27f0a5847d83513a679794cef",
+    "webDeploymentId": "dpl_JnR5gZNF5XLm1QMzoxRsBKzWwpX3",
+    "apiDeploymentId": "dpl_GUR3MuQgrR1oz7L9J3cMLPb7Fgqu"
+  },
+  "summary": { "expected": 24, "captured": 24, "passed": 24, "failed": 0 },
+  "defaults": {
+    "horizontalOverflow": false,
+    "brokenImages": 0,
+    "clippedCriticalElements": 0,
+    "focusVisible": true,
+    "consoleErrors": 0,
+    "consoleWarnings": 0,
+    "status": "pass"
+  },
+  "items": [
+    {
+      "role": "customer",
+      "route": "/venues",
+      "heading": "Temukan tempat mainmu",
+      "viewport": "360x800",
+      "theme": "light"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "heading": "Temukan tempat mainmu",
+      "viewport": "768x1024",
+      "theme": "light"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "heading": "Temukan tempat mainmu",
+      "viewport": "1024x768",
+      "theme": "light"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "heading": "Temukan tempat mainmu",
+      "viewport": "1440x900",
+      "theme": "light"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "heading": "Temukan tempat mainmu",
+      "viewport": "360x800",
+      "theme": "dark"
+    },
+    {
+      "role": "customer",
+      "route": "/venues",
+      "heading": "Temukan tempat mainmu",
+      "viewport": "1440x900",
+      "theme": "dark"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "360x800",
+      "theme": "light"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "768x1024",
+      "theme": "light"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "1024x768",
+      "theme": "light"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "1440x900",
+      "theme": "light"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "360x800",
+      "theme": "dark"
+    },
+    {
+      "role": "owner",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "1440x900",
+      "theme": "dark"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "360x800",
+      "theme": "light"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "768x1024",
+      "theme": "light"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "1024x768",
+      "theme": "light"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "1440x900",
+      "theme": "light"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "360x800",
+      "theme": "dark"
+    },
+    {
+      "role": "staff",
+      "route": "/business/-CxsmDZXnNY3ewIwA_xfmA/overview",
+      "heading": "Ringkasan operasional",
+      "viewport": "1440x900",
+      "theme": "dark"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "viewport": "360x800",
+      "theme": "light"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "viewport": "768x1024",
+      "theme": "light"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "viewport": "1024x768",
+      "theme": "light"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "viewport": "1440x900",
+      "theme": "light"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "viewport": "360x800",
+      "theme": "dark"
+    },
+    {
+      "role": "admin",
+      "route": "/admin",
+      "heading": "Kendali operasional LapanganGo",
+      "viewport": "1440x900",
+      "theme": "dark"
+    }
+  ]
+}

@@ -2,6 +2,8 @@
 
 Status: **LOCAL READINESS ACCEPTED — STAGING DIIZINKAN**
 
+Status staging: **TECHNICAL GATE INCOMPLETE — REMEDIATION REQUIRED**
+
 ## Readiness yang sudah terbukti
 
 - 43/43 requirement PRD mempunyai implementasi, contract, dan evidence lokal.
@@ -29,3 +31,14 @@ Status: **LOCAL READINESS ACCEPTED — STAGING DIIZINKAN**
 
 Acceptance lokal tidak mencakup provider live, production, atau transfer uang nyata.
 Staging teknis boleh dilanjutkan menggunakan commit yang lulus gate ini.
+
+## Hasil staging
+
+- Deployment web/API sehat dan visual matrix 24/24 lulus.
+- Staff authorization, Admin read smoke, tiket/review Customer, promo sandbox, serta
+  owner reply lulus.
+- `B2-NOT-STG-001` (Medium/Open): preference email reminder kembali aktif setelah
+  response/refetch dan reload.
+
+Keputusan final staging belum dapat diminta sebelum finding tersebut diremediasi dan
+retest server-backed lulus. Keputusan local readiness sebelumnya tidak berubah.

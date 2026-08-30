@@ -4,7 +4,8 @@
 - Runtime canonical: Node.js `v22.23.2`
 - Environment: MySQL 8 E2E `3308`, Redis `6380/1`, API `3102`, web `4175`
 - Scope: lokal terisolasi, regression B1 + fitur B2
-- Status: **local readiness accepted; 43/43 complete-local; staging diizinkan**
+- Status lokal: **local readiness accepted; 43/43 complete-local**
+- Status staging: **technical gate belum selesai — 1 finding Medium terbuka**
 
 ## Hasil otomatis
 
@@ -86,3 +87,19 @@ sampai `0007`. API live/ready dan query OutboxPublisher berhasil tanpa reset dat
 Tidak ada finding Blocker/Critical/High dari QA yang masih terbuka. Finding Medium
 dependency `B2-DEP-LOCAL-001` diterima Project Owner sebagai `Accepted Risk` untuk Phase
 B2 lokal pada 30 Agustus 2026.
+
+## QA staging 30 Agustus 2026
+
+Staging memakai source commit `d93a9f03175b53d27f0a5847d83513a679794cef` pada
+deployment web `dpl_JnR5gZNF5XLm1QMzoxRsBKzWwpX3` dan API
+`dpl_GUR3MuQgrR1oz7L9J3cMLPb7Fgqu`. Migration B2 dan bootstrap default dijalankan
+forward-only tanpa reset data B1. Live/readiness sehat dan runtime log menunjukkan nol
+API/web `5xx` pada rentang QA.
+
+External Chrome menghasilkan matriks **24/24 pass**. Empat submission server-backed
+lulus: tiket Customer, review Customer, promo sandbox Owner, dan balasan Owner. Uji
+preference email reminder gagal persisten setelah refetch/reload dan dicatat sebagai
+`B2-NOT-STG-001` Medium/Open. Karena finding Medium belum diremediasi atau diterima
+Project Owner, staging technical gate belum selesai.
+
+Evidence: `evidence/2026-08-30-b2-staging-readiness/`.

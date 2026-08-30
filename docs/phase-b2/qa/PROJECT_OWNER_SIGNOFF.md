@@ -31,3 +31,18 @@ Project Owner memeriksa laporan dan evidence.
 - Nama Project Owner: dicatat melalui keputusan Project Owner pada task ini
 - Tanggal: 30 Agustus 2026
 - Catatan: `Diterima`; implementer melanjutkan commit, push, dan staging sesuai plan.
+
+## Gate staging
+
+Status teknis: **belum selesai — remediation diperlukan**.
+
+- [x] Deployment web/API sehat dan memakai source commit yang sama.
+- [x] Matriks visual staging 24/24 tersedia.
+- [x] Empat role dan Staff authorization smoke lulus.
+- [ ] Seluruh functional smoke staging lulus tanpa finding Medium terbuka.
+- [ ] Staging technical gate complete.
+- [ ] Project Owner memberikan keputusan final staging.
+
+Finding penahan: `B2-NOT-STG-001` (Medium/Open), notification preference Customer tidak
+persisten setelah refetch/reload. Implementer tidak mencentang keputusan final Project
+Owner.
