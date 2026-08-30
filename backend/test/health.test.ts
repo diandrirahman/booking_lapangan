@@ -1,5 +1,5 @@
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.js";
 import { loadEnvironment } from "../src/config/environment.js";
 
@@ -14,6 +14,22 @@ describe("health API", () => {
     expect(response.status).toBe(200);
     expect(response.headers["x-request-id"]).toMatch(/^req_/);
     expect(response.body).toEqual({ status: "ok", service: "lapangango-api" });
+  });
+
+  it("uses the forwarded client address behind the deployment proxy", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const app = createApp({ environment, readinessCheck: async () => undefined });
+      const response = await request(app)
+        .get("/api/v1/health/live")
+        .set("X-Forwarded-For", "203.0.113.10")
+        .set("Forwarded", "for=203.0.113.10;proto=https");
+
+      expect(response.status).toBe(200);
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("reports degraded readiness without affecting liveness", async () => {

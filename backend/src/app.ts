@@ -2,7 +2,7 @@ import express, { type Express, type RequestHandler } from "express";
 import cookieParser from "cookie-parser";
 import type { Router } from "express";
 import helmetModule, { type HelmetOptions } from "helmet";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import pino from "pino";
 import { pinoHttp } from "pino-http";
 import type { Environment } from "./config/environment.js";
@@ -36,6 +36,7 @@ export function createApp(dependencies: AppDependencies): Express {
   });
 
   app.disable("x-powered-by");
+  app.set("trust proxy", 1);
   app.use(requestId);
   app.use(
     pinoHttp({
@@ -51,6 +52,8 @@ export function createApp(dependencies: AppDependencies): Express {
       limit: dependencies.environment.NODE_ENV === "test" ? 10_000 : 120,
       standardHeaders: "draft-8",
       legacyHeaders: false,
+      keyGenerator: (request) =>
+        ipKeyGenerator(request.ip ?? request.socket.remoteAddress ?? "unknown"),
     }),
   );
   app.use(express.json({ limit: "1mb" }));
