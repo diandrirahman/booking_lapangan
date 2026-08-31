@@ -123,6 +123,24 @@ describe("Phase B2 promotion and notification remediation", () => {
       expect(visible.some((promotion) => promotion.id === assigned.id)).toBe(true);
       expect(visible.some((promotion) => promotion.id === otherVenue.id)).toBe(false);
       await expect(finance.listPromotions(formatPublicId(1), [])).resolves.toEqual([]);
+
+      const assignedExport = await finance.exportFinance(
+        formatPublicId(1),
+        "promotions",
+        "csv",
+        [formatPublicId(1)],
+      );
+      const assignedCsv = assignedExport.body.toString("utf8");
+      expect(assignedCsv).toContain(assignedInput.code);
+      expect(assignedCsv).not.toContain(`OV${suffix}`);
+
+      const unassignedExport = await finance.exportFinance(
+        formatPublicId(1),
+        "promotions",
+        "csv",
+        [],
+      );
+      expect(unassignedExport.body.toString("utf8")).not.toContain(assignedInput.code);
     } finally {
       await cleanupPromotions(createdIds, idempotencyKeys);
     }
@@ -153,9 +171,11 @@ describe("Phase B2 promotion and notification remediation", () => {
         });
       const firstTenant = await createPromotionFor(1, `I1${suffix}`);
       promotionIds.push(parsePublicId(firstTenant.id));
-      await expect(createPromotionFor(1, `IGNORED${suffix}`)).resolves.toEqual(
-        firstTenant,
-      );
+      await expect(createPromotionFor(1, `IGNORED${suffix}`)).rejects.toMatchObject({
+        statusCode: 409,
+        code: "IDEMPOTENCY_KEY_REUSED",
+      });
+      await expect(createPromotionFor(1, `I1${suffix}`)).resolves.toEqual(firstTenant);
       const secondTenant = await createPromotionFor(2, `I2${suffix}`);
       promotionIds.push(parsePublicId(secondTenant.id));
       expect(secondTenant.id).not.toBe(firstTenant.id);
@@ -189,6 +209,8 @@ describe("Phase B2 promotion and notification remediation", () => {
           startsAt: new Date("2026-08-01T00:00:00.000Z"),
           endsAt: new Date("2026-12-31T00:00:00.000Z"),
           fundingSource: "OWNER",
+          discountType: "FIXED",
+          discountValue: 1_000,
           discoveryOnly: false,
         })
         .$returningId();
@@ -205,8 +227,8 @@ describe("Phase B2 promotion and notification remediation", () => {
       });
       const replayedLegacy = await finance.createPromotion({
         tenantId: formatPublicId(1),
-        code: `UNUSED${suffix}`,
-        name: "Legacy promotion replay request",
+        code: `LG${suffix}`,
+        name: "Legacy promotion replay",
         discountType: "FIXED",
         discountValue: 1_000,
         startsAt: new Date("2026-08-01T00:00:00.000Z"),
@@ -241,10 +263,10 @@ describe("Phase B2 promotion and notification remediation", () => {
       });
       const replayedLegacyCommission = await finance.createCommissionConfig({
         tenantId: formatPublicId(1),
-        rateBasisPoints: 950,
-        effectiveFrom: new Date("2032-01-01T00:00:00.000Z"),
+        rateBasisPoints: 900,
+        effectiveFrom: new Date("2031-01-01T00:00:00.000Z"),
         gatewayFeeFunding: "OWNER",
-        reason: "Legacy commission same tenant replay",
+        reason: "Legacy commission replay",
         actorUserId: ADMIN_USER_ID,
         idempotencyKey: legacyCommissionKey,
       });
@@ -262,6 +284,75 @@ describe("Phase B2 promotion and notification remediation", () => {
       expect(otherTenantFromLegacyKey.id).not.toBe(replayedLegacyCommission.id);
     } finally {
       await cleanupPromotions(promotionIds, idempotencyKeys);
+      if (commissionIds.length > 0) {
+        await testDatabase.db
+          .delete(auditLogs)
+          .where(
+            and(
+              eq(auditLogs.resourceType, "commission_config"),
+              inArray(auditLogs.resourceId, commissionIds),
+            ),
+          );
+        await testDatabase.db
+          .delete(commissionConfigs)
+          .where(inArray(commissionConfigs.id, commissionIds));
+      }
+    }
+  });
+
+  it("membuat create promo dan commission concurrent tetap deterministic", async () => {
+    const finance = new FinanceService(testDatabase);
+    const suffix = uniqueSuffix();
+    const promotionKey = `promotion-concurrent-${suffix}`;
+    const commissionKey = `commission-concurrent-${suffix}`;
+    const promotionIds: number[] = [];
+    const commissionIds: number[] = [];
+    try {
+      const promotionInput = {
+        tenantId: formatPublicId(1),
+        code: `PC${suffix}`,
+        name: "Promo concurrent",
+        discountType: "FIXED" as const,
+        discountValue: 1_000,
+        startsAt: new Date("2026-08-01T00:00:00.000Z"),
+        endsAt: new Date("2026-12-31T00:00:00.000Z"),
+        fundingSource: "OWNER" as const,
+        actorUserId: ADMIN_USER_ID,
+        idempotencyKey: promotionKey,
+      };
+      const promotionsCreated = await Promise.all([
+        finance.createPromotion(promotionInput),
+        finance.createPromotion(promotionInput),
+      ]);
+      expect(promotionsCreated[1]).toEqual(promotionsCreated[0]);
+      promotionIds.push(parsePublicId(promotionsCreated[0].id));
+      await expect(
+        finance.createPromotion({ ...promotionInput, name: "Payload berbeda" }),
+      ).rejects.toMatchObject({ statusCode: 409, code: "IDEMPOTENCY_KEY_REUSED" });
+
+      const commissionInput = {
+        tenantId: formatPublicId(1),
+        rateBasisPoints: 875,
+        effectiveFrom: new Date("2035-01-01T00:00:00.000Z"),
+        gatewayFeeFunding: "OWNER" as const,
+        reason: "Commission concurrent",
+        actorUserId: ADMIN_USER_ID,
+        idempotencyKey: commissionKey,
+      };
+      const commissionsCreated = await Promise.all([
+        finance.createCommissionConfig(commissionInput),
+        finance.createCommissionConfig(commissionInput),
+      ]);
+      expect(commissionsCreated[1]).toEqual(commissionsCreated[0]);
+      commissionIds.push(parsePublicId(commissionsCreated[0].id));
+      await expect(
+        finance.createCommissionConfig({ ...commissionInput, rateBasisPoints: 900 }),
+      ).rejects.toMatchObject({ statusCode: 409, code: "IDEMPOTENCY_KEY_REUSED" });
+    } finally {
+      await cleanupPromotions(promotionIds, [promotionKey]);
+      await testDatabase.db
+        .delete(commandIdempotency)
+        .where(eq(commandIdempotency.idempotencyKey, commissionKey));
       if (commissionIds.length > 0) {
         await testDatabase.db
           .delete(auditLogs)

@@ -14,6 +14,8 @@ import { createPaymentRouter } from "../../src/payment/http/paymentRouter.js";
 import type { AdminOperationsService } from "../../src/platform/admin/AdminOperationsService.js";
 import { createAdminOperationsRouter } from "../../src/platform/admin/adminOperationsRouter.js";
 import type { TenantAuthorizationService } from "../../src/tenant/authorization/TenantAuthorizationService.js";
+import type { TenantService } from "../../src/tenant/application/TenantService.js";
+import { createTenantRouter } from "../../src/tenant/http/tenantRouter.js";
 import type { MediaService } from "../../src/venue/media/MediaService.js";
 import {
   hasExpectedImageSignature,
@@ -369,5 +371,153 @@ describe("security boundaries", () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ items: [] });
     expect(listPromotions).toHaveBeenCalledWith(formatPublicId(1), assignedVenueIds);
+  });
+
+  it("menolak direct API daftar anggota tanpa permission team.manage", async () => {
+    const listMembers = vi.fn();
+    const requirePermission = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(403, "PERMISSION_REQUIRED", "Permission diperlukan."),
+      );
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "staff-session",
+          userId: formatPublicId(200),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [
+        createTenantRouter(
+          { listMembers } as unknown as TenantService,
+          { requirePermission } as unknown as TenantAuthorizationService,
+        ),
+      ],
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/business/tenants/${formatPublicId(1)}/members`)
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=staff-token`);
+
+    expect(response.status).toBe(403);
+    expect(requirePermission).toHaveBeenCalledWith(
+      formatPublicId(200),
+      formatPublicId(1),
+      "team.manage",
+    );
+    expect(listMembers).not.toHaveBeenCalled();
+  });
+
+  it("menolak daftar anggota tenant lain sebelum read model dipanggil", async () => {
+    const listMembers = vi.fn();
+    const requirePermission = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(403, "TENANT_ACCESS_DENIED", "Tenant tidak dapat diakses."),
+      );
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "staff-session",
+          userId: formatPublicId(200),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [
+        createTenantRouter(
+          { listMembers } as unknown as TenantService,
+          { requirePermission } as unknown as TenantAuthorizationService,
+        ),
+      ],
+    });
+
+    const foreignTenantId = formatPublicId(2);
+    const response = await request(app)
+      .get(`/api/v1/business/tenants/${foreignTenantId}/members`)
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=staff-token`);
+
+    expect(response.status).toBe(403);
+    expect(requirePermission).toHaveBeenCalledWith(
+      formatPublicId(200),
+      foreignTenantId,
+      "team.manage",
+    );
+    expect(listMembers).not.toHaveBeenCalled();
+  });
+
+  it("mengizinkan daftar anggota setelah permission team.manage lulus", async () => {
+    const listMembers = vi.fn().mockResolvedValue([{ id: "member-1" }]);
+    const requirePermission = vi.fn().mockResolvedValue({ role: "OWNER" });
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "owner-session",
+          userId: formatPublicId(1),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [
+        createTenantRouter(
+          { listMembers } as unknown as TenantService,
+          { requirePermission } as unknown as TenantAuthorizationService,
+        ),
+      ],
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/business/tenants/${formatPublicId(1)}/members`)
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=owner-token`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ items: [{ id: "member-1" }] });
+    expect(listMembers).toHaveBeenCalledWith(formatPublicId(1), undefined);
+  });
+
+  it("meneruskan venue assignment Staff ke query daftar anggota", async () => {
+    const listMembers = vi.fn().mockResolvedValue([]);
+    const assignedVenueIds = [formatPublicId(1)];
+    const requirePermission = vi.fn().mockResolvedValue({
+      role: "STAFF",
+      assignedVenueIds,
+    });
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "staff-session",
+          userId: formatPublicId(200),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [
+        createTenantRouter(
+          { listMembers } as unknown as TenantService,
+          { requirePermission } as unknown as TenantAuthorizationService,
+        ),
+      ],
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/business/tenants/${formatPublicId(1)}/members`)
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=staff-token`);
+
+    expect(response.status).toBe(200);
+    expect(listMembers).toHaveBeenCalledWith(formatPublicId(1), assignedVenueIds);
   });
 });

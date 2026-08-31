@@ -18,7 +18,7 @@
     "test:security": "vitest run test/security",
     "test:concurrency": "vitest run test/concurrency --pool forks --maxWorkers 1",
     "test:b2:unit": "vitest run src/finance/domain/calculateFinancialSnapshot.test.ts src/booking/domain/cancellationPolicy.test.ts",
-    "test:b2:integration": "vitest run test/integration/b2DomainFlows.test.ts --pool forks --maxWorkers 1",
+    "test:b2:integration": "vitest run test/integration/b2DomainFlows.test.ts test/integration/b2ActiveFindings.test.ts test/integration/b2PromotionNotificationRemediation.test.ts --pool forks --maxWorkers 1",
     "test:b2:security": "vitest run test/security/tenantIsolation.test.ts --pool forks --maxWorkers 1",
     "test:b2:concurrency": "vitest run test/concurrency/promotionQuota.test.ts --pool forks --maxWorkers 1",
     "test:docs": "vitest run test/documentation",

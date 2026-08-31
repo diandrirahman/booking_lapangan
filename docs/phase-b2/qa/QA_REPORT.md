@@ -1,11 +1,11 @@
-# Phase B2 Local QA Report
+# Phase B2 QA Report
 
-- Tanggal: 30 Agustus 2026
+- Tanggal pembaruan terakhir: 31 Agustus 2026
 - Runtime canonical: Node.js `v22.23.2`
 - Environment: MySQL 8 E2E `3308`, Redis `6380/1`, API `3102`, web `4175`
 - Scope: lokal terisolasi, regression B1 + fitur B2
 - Status lokal: **local readiness accepted; 43/43 complete-local**
-- Status staging: **technical gate complete — menunggu keputusan Project Owner**
+- Status staging source terbaru: **menunggu redeploy dan targeted retest**
 
 ## Hasil otomatis
 
@@ -14,9 +14,9 @@
 | Formatter                    | Lulus                                            |
 | ESLint                       | Lulus                                            |
 | TypeScript                   | Lulus                                            |
-| Unit frontend/backend/client | 49 + 55 + 2 lulus                                |
-| Integration                  | 37/37 lulus                                      |
-| Security                     | 25/25 lulus                                      |
+| Unit frontend/backend/client | 49 + 56 + 2 lulus                                |
+| Integration                  | 65/65 lulus                                      |
+| Security                     | 29/29 lulus                                      |
 | Concurrency                  | 2/2 lulus; promo quota diuji dengan 50 request   |
 | OpenAPI contract             | Lulus                                            |
 | B2 Playwright empat role     | 4/4 lulus, termasuk regression dialog dan axe    |
@@ -70,6 +70,28 @@ Evidence delta: `evidence/2026-08-30-b2-ui-refresh-local/`.
 Database development juga telah dimigrasikan forward-only melalui migration `0004`
 sampai `0007`. API live/ready dan query OutboxPublisher berhasil tanpa reset database.
 
+## Remediasi finance dan idempotency terbaru 31 Agustus 2026
+
+Tujuh putaran review terarah menutup seluruh finding aktif pada lifecycle refund,
+earning, payout, reschedule, authorization, tenant isolation, dan mutation idempotency.
+Migration `0008` diterapkan forward-only pada database development tanpa reset data.
+
+- Ledger refund dibalik menurut semantic account lifecycle, termasuk partial refund,
+  refund sebelum completion, reschedule beda harga, dan koreksi posting legacy.
+- Earning dan payout menjaga state, lock order, cancellation, retry, audit, outbox, serta
+  rekonsiliasi legacy yang idempotent.
+- Refund, reschedule, promotion, commission, payout status, dan cancellation menolak
+  false replay ketika payload atau reason berubah; create concurrent tidak menjadi 500.
+- Boundary `team.manage`, export promo, review Staff, tenant, dan venue assignment
+  diterapkan server-side dengan regression negatif.
+
+Full `npm run qa:b2:local` lulus setelah remediasi: integration 65/65, security 29/29,
+seluruh unit/contract/migration/concurrency/E2E/documentation lulus, serta audit tetap
+tanpa High/Critical. Re-review terakhir tidak menemukan P1/P2 aktif.
+
+Evidence root cause, fix, dan regression per finding:
+`evidence/2026-08-31-b2-ponytail-review/findings.md`.
+
 ## Temuan dan remediasi selama QA
 
 1. Respons sukses `201` tanpa body diparse sebagai JSON oleh API client. Command sudah
@@ -104,7 +126,7 @@ Project Owner, staging technical gate belum selesai.
 
 Evidence: `evidence/2026-08-30-b2-staging-readiness/`.
 
-## Remediasi P1/P2 dan targeted staging retest 31 Agustus 2026
+## Baseline targeted staging retest 31 Agustus 2026
 
 Remediasi promotion funding, tenant/venue isolation, tenant-scoped idempotency, serta
 notification preference telah lulus full `qa:b2:local`. Source commit
@@ -121,7 +143,11 @@ notification preference telah lulus full `qa:b2:local`. Source commit
 - Visual delta 12/12 lulus pada `360x800` dan `1440x900`, light/dark.
 
 Lima finding remediation berstatus Closed, termasuk `B2-NOT-STG-001`. Tidak ada
-Blocker/Critical/High/Medium baru. Status teknis staging sekarang complete dan menunggu
-keputusan final Project Owner.
+Blocker/Critical/High/Medium baru pada source tersebut.
 
 Evidence: `evidence/2026-08-31-b2-p1-p2-staging-retest/`.
+
+Baseline ini tetap valid sebagai bukti integration boundary, tetapi belum membuktikan
+remediasi finance/idempotency terbaru pada working source. Status staging source terbaru
+baru boleh kembali menjadi technical gate complete setelah commit yang lulus local gate
+dideploy ke API dan web, lalu targeted retest tersimpan sebagai evidence baru.

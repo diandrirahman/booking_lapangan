@@ -1,4 +1,5 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { DatabaseConnection } from "../../database/client.js";
 import {
   bookingPaymentSummaries,
@@ -50,31 +51,63 @@ export class RefundService {
       now?: Date | undefined;
     },
   ): Promise<number> {
-    const [existing] = await transaction
-      .select({ id: refunds.id })
-      .from(refunds)
-      .where(eq(refunds.idempotencyKey, input.idempotencyKey))
+    const [booking] = await transaction
+      .select({ tenantId: bookings.tenantId })
+      .from(bookings)
+      .where(eq(bookings.id, input.bookingId))
       .limit(1);
-    if (existing) return existing.id;
-    const createdRows = await transaction
-      .insert(refunds)
-      .values({
-        bookingId: input.bookingId,
-        paymentAttemptId: input.paymentAttemptId,
-        amount: input.amount,
-        status:
-          input.decisionStatus === "MANUAL_REQUIRED" ? "MANUAL_REQUIRED" : "PENDING",
-        decisionStatus: input.decisionStatus ?? "APPROVED",
-        kind: input.kind,
-        reason: input.reason,
-        idempotencyKey: input.idempotencyKey,
-        requestedByUserId: input.requestedByUserId,
-        decidedByUserId:
-          input.decisionStatus === "MANUAL_REQUIRED" ? null : input.requestedByUserId,
-        decidedAt:
-          input.decisionStatus === "MANUAL_REQUIRED" ? null : (input.now ?? new Date()),
-      })
-      .$returningId();
+    if (!booking) throw new Error("Booking refund tidak ditemukan.");
+    const scopedIdempotencyKey = refundIdempotencyKey(
+      booking.tenantId,
+      input.idempotencyKey,
+    );
+    const existing = await findRefundReplay(
+      transaction,
+      booking.tenantId,
+      input.idempotencyKey,
+    );
+    if (existing) {
+      await assertRefundReplayMatches(transaction, existing, input);
+      return existing.id;
+    }
+    if (input.decisionStatus !== "MANUAL_REQUIRED") {
+      await this.assertRefundCapacity(transaction, input.bookingId, input.amount);
+    }
+    let createdRows: Array<{ id: number }>;
+    try {
+      createdRows = await transaction
+        .insert(refunds)
+        .values({
+          bookingId: input.bookingId,
+          paymentAttemptId: input.paymentAttemptId,
+          amount: input.amount,
+          status:
+            input.decisionStatus === "MANUAL_REQUIRED" ? "MANUAL_REQUIRED" : "PENDING",
+          decisionStatus: input.decisionStatus ?? "APPROVED",
+          kind: input.kind,
+          reason: input.reason,
+          idempotencyKey: scopedIdempotencyKey,
+          requestedByUserId: input.requestedByUserId,
+          decidedByUserId:
+            input.decisionStatus === "MANUAL_REQUIRED" ? null : input.requestedByUserId,
+          decidedAt:
+            input.decisionStatus === "MANUAL_REQUIRED"
+              ? null
+              : (input.now ?? new Date()),
+        })
+        .$returningId();
+    } catch (error) {
+      if (!isDuplicateEntry(error)) throw error;
+      const [concurrent] = await transaction
+        .select()
+        .from(refunds)
+        .where(eq(refunds.idempotencyKey, scopedIdempotencyKey))
+        .limit(1)
+        .for("update");
+      if (!concurrent) throw error;
+      await assertRefundReplayMatches(transaction, concurrent, input);
+      return concurrent.id;
+    }
     const created = createdRows[0];
     if (!created) throw new Error("MySQL tidak mengembalikan ID refund.");
     await transaction.insert(refundStateTransitions).values({
@@ -109,6 +142,30 @@ export class RefundService {
         .for("update");
       if (!row)
         throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking tidak ditemukan.");
+      const actorUserId = parsePublicId(userId);
+      const commandScope = `booking.cancel:${row.booking.id}`;
+      const [existingCommand] = await transaction
+        .select({ responseBody: commandIdempotency.responseBody })
+        .from(commandIdempotency)
+        .where(
+          and(
+            eq(commandIdempotency.scope, commandScope),
+            eq(commandIdempotency.actorUserId, actorUserId),
+            eq(commandIdempotency.idempotencyKey, idempotencyKey),
+          ),
+        )
+        .limit(1);
+      if (existingCommand) {
+        const replay = cancellationReplayFromResponse(existingCommand.responseBody);
+        if (!replay || replay.reason !== reason) {
+          throw new ApiError(
+            409,
+            "IDEMPOTENCY_KEY_REUSED",
+            "Idempotency-Key telah digunakan untuk pembatalan yang berbeda.",
+          );
+        }
+        return replay.result;
+      }
       if (!["HOLD", "CONFIRMED", "PENDING_CONFIRMATION"].includes(row.booking.status)) {
         throw new ApiError(
           409,
@@ -136,7 +193,7 @@ export class RefundService {
       );
       await transaction.insert(bookingCancellations).values({
         bookingId: row.booking.id,
-        actorUserId: parsePublicId(userId),
+        actorUserId,
         reason,
         kind: "CUSTOMER_POLICY",
         refundBasisPoints,
@@ -161,7 +218,7 @@ export class RefundService {
           kind: "CUSTOMER_CANCELLATION",
           reason,
           idempotencyKey,
-          requestedByUserId: parsePublicId(userId),
+          requestedByUserId: actorUserId,
           now,
         });
       }
@@ -186,7 +243,20 @@ export class RefundService {
         payload: { status: "CANCELLED", hint: "refetch-booking" },
         occurredAt: now,
       });
-      return { status: "CANCELLED", refundBasisPoints, refundableAmount };
+      const result = {
+        status: "CANCELLED" as const,
+        refundBasisPoints,
+        refundableAmount,
+      };
+      await transaction.insert(commandIdempotency).values({
+        scope: commandScope,
+        idempotencyKey,
+        actorUserId,
+        resourceId: row.booking.id,
+        responseStatus: 200,
+        responseBody: { reason, result },
+      });
+      return result;
     });
   }
 
@@ -318,22 +388,22 @@ export class RefundService {
         .for("update");
       if (!booking)
         throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking tidak ditemukan.");
-      const [summary] = await transaction
-        .select()
-        .from(bookingPaymentSummaries)
-        .where(eq(bookingPaymentSummaries.bookingId, booking.id))
-        .limit(1)
-        .for("update");
-      const available = Math.max(
-        0,
-        (summary?.totalPaid ?? 0) - (summary?.totalRefunded ?? 0),
+      const replay = await findRefundReplay(
+        transaction,
+        booking.tenantId,
+        input.idempotencyKey,
       );
-      if (input.amount > available)
-        throw new ApiError(
-          409,
-          "REFUND_EXCEEDS_PAID_AMOUNT",
-          "Refund melebihi pembayaran berhasil.",
-        );
+      if (replay) {
+        await assertRefundReplayMatches(transaction, replay, {
+          bookingId: booking.id,
+          amount: input.amount,
+          kind: input.manualRequired ? "ADMIN_DISPUTE" : "OWNER_EXCEPTION",
+          reason: input.reason,
+          requestedByUserId: parsePublicId(input.actorUserId),
+          decisionStatus: input.manualRequired ? "MANUAL_REQUIRED" : "APPROVED",
+        });
+        return refundCreateView(replay);
+      }
       const id = await this.requestRefund(transaction, {
         bookingId: booking.id,
         amount: input.amount,
@@ -357,10 +427,10 @@ export class RefundService {
         },
         ...auditContext,
       });
-      return {
-        id: formatPublicId(id),
-        status: input.manualRequired ? "MANUAL_REQUIRED" : "PENDING",
-      };
+      return refundCreateView({
+        id,
+        kind: input.manualRequired ? "ADMIN_DISPUTE" : "OWNER_EXCEPTION",
+      });
     });
   }
 
@@ -375,30 +445,52 @@ export class RefundService {
     await this.database.db.transaction(async (transaction) => {
       const id = parsePublicId(refundId);
       const actorDatabaseId = parsePublicId(actorUserId);
-      const [existing] = await transaction
-        .select({ id: commandIdempotency.id })
-        .from(commandIdempotency)
-        .where(
-          and(
-            eq(commandIdempotency.scope, "refund.decision"),
-            eq(commandIdempotency.actorUserId, actorDatabaseId),
-            eq(commandIdempotency.idempotencyKey, idempotencyKey),
-          ),
-        )
-        .limit(1);
-      if (existing) return;
       const [refund] = await transaction
         .select()
         .from(refunds)
         .where(eq(refunds.id, id))
         .limit(1)
         .for("update");
+      const [existing] = await transaction
+        .select({
+          id: commandIdempotency.id,
+          responseBody: commandIdempotency.responseBody,
+        })
+        .from(commandIdempotency)
+        .where(
+          refundCommandReplayWhere("decision", id, actorDatabaseId, idempotencyKey),
+        )
+        .limit(1)
+        .for("update");
+      if (existing) {
+        const recordedDecision =
+          refundDecisionFromResponse(existing.responseBody) ??
+          refundDecisionFromState(refund?.decisionStatus);
+        const recordedReason =
+          refundDecisionReasonFromResponse(existing.responseBody) ??
+          refundDecisionReasonFromState(refund?.reason);
+        if (
+          recordedDecision === null ||
+          recordedDecision !== approved ||
+          recordedReason !== reason
+        ) {
+          throw new ApiError(
+            409,
+            "IDEMPOTENCY_KEY_REUSED",
+            "Idempotency-Key telah digunakan untuk keputusan refund yang berbeda.",
+          );
+        }
+        return;
+      }
       if (!refund || refund.status !== "MANUAL_REQUIRED")
         throw new ApiError(
           409,
           "REFUND_NOT_AWAITING_DECISION",
           "Refund tidak menunggu keputusan manual.",
         );
+      if (approved) {
+        await this.assertRefundCapacity(transaction, refund.bookingId, refund.amount);
+      }
       const status = approved ? "PENDING" : "REJECTED";
       await transaction
         .update(refunds)
@@ -407,7 +499,6 @@ export class RefundService {
           decisionStatus: approved ? "APPROVED" : "REJECTED",
           decidedByUserId: actorDatabaseId,
           decidedAt: new Date(),
-          reason: `${refund.reason}\nKeputusan: ${reason}`,
           updatedAt: new Date(),
         })
         .where(eq(refunds.id, id));
@@ -435,13 +526,43 @@ export class RefundService {
         ...auditContext,
       });
       await transaction.insert(commandIdempotency).values({
-        scope: "refund.decision",
+        scope: refundCommandScope("decision", id),
         idempotencyKey,
         actorUserId: actorDatabaseId,
         resourceId: id,
         responseStatus: 204,
+        responseBody: { approved, reason },
       });
     });
+  }
+
+  private async assertRefundCapacity(
+    transaction: Transaction,
+    bookingId: number,
+    amount: number,
+  ): Promise<void> {
+    const [summary] = await transaction
+      .select()
+      .from(bookingPaymentSummaries)
+      .where(eq(bookingPaymentSummaries.bookingId, bookingId))
+      .limit(1)
+      .for("update");
+    const pending = await transaction
+      .select({ amount: refunds.amount })
+      .from(refunds)
+      .where(and(eq(refunds.bookingId, bookingId), eq(refunds.status, "PENDING")));
+    const reserved = pending.reduce((total, refund) => total + refund.amount, 0);
+    const available = Math.max(
+      0,
+      (summary?.totalPaid ?? 0) - (summary?.totalRefunded ?? 0) - reserved,
+    );
+    if (amount > available) {
+      throw new ApiError(
+        409,
+        "REFUND_EXCEEDS_PAID_AMOUNT",
+        "Refund melebihi pembayaran berhasil yang belum dicadangkan.",
+      );
+    }
   }
 
   async retryFailedRefund(
@@ -453,18 +574,26 @@ export class RefundService {
     const id = parsePublicId(refundId);
     const actorDatabaseId = parsePublicId(actorUserId);
     await this.database.db.transaction(async (transaction) => {
+      const [refund] = await transaction
+        .select({ id: refunds.id, status: refunds.status })
+        .from(refunds)
+        .where(eq(refunds.id, id))
+        .limit(1)
+        .for("update");
       const [existing] = await transaction
         .select({ id: commandIdempotency.id })
         .from(commandIdempotency)
-        .where(
-          and(
-            eq(commandIdempotency.scope, "refund.retry"),
-            eq(commandIdempotency.actorUserId, actorDatabaseId),
-            eq(commandIdempotency.idempotencyKey, idempotencyKey),
-          ),
-        )
-        .limit(1);
+        .where(refundCommandReplayWhere("retry", id, actorDatabaseId, idempotencyKey))
+        .limit(1)
+        .for("update");
       if (existing) return;
+      if (!refund || refund.status !== "FAILED") {
+        throw new ApiError(
+          409,
+          "REFUND_NOT_RETRYABLE",
+          "Refund tidak dapat dicoba ulang.",
+        );
+      }
       const result = await transaction
         .update(refunds)
         .set({
@@ -481,7 +610,7 @@ export class RefundService {
           "Refund tidak dapat dicoba ulang.",
         );
       await transaction.insert(commandIdempotency).values({
-        scope: "refund.retry",
+        scope: refundCommandScope("retry", id),
         idempotencyKey,
         actorUserId: actorDatabaseId,
         resourceId: id,
@@ -643,4 +772,185 @@ export class RefundService {
       return true;
     });
   }
+}
+
+function refundIdempotencyKey(tenantId: number, rawKey: string): string {
+  const digest = createHash("sha256")
+    .update(`${tenantId}:${rawKey}`)
+    .digest("base64url");
+  return `refund:${digest}`;
+}
+
+function refundCommandScope(action: "decision" | "retry", refundId: number): string {
+  return `refund.${action}:${refundId}`;
+}
+
+function refundCommandReplayWhere(
+  action: "decision" | "retry",
+  refundId: number,
+  actorUserId: number,
+  idempotencyKey: string,
+) {
+  return and(
+    eq(commandIdempotency.actorUserId, actorUserId),
+    eq(commandIdempotency.idempotencyKey, idempotencyKey),
+    or(
+      eq(commandIdempotency.scope, refundCommandScope(action, refundId)),
+      and(
+        eq(commandIdempotency.scope, `refund.${action}`),
+        eq(commandIdempotency.resourceId, refundId),
+      ),
+    ),
+  );
+}
+
+function refundDecisionFromResponse(value: unknown): boolean | null {
+  if (!value || typeof value !== "object" || !("approved" in value)) return null;
+  return typeof value.approved === "boolean" ? value.approved : null;
+}
+
+function refundDecisionReasonFromResponse(value: unknown): string | null {
+  if (!value || typeof value !== "object" || !("reason" in value)) return null;
+  return typeof value.reason === "string" ? value.reason : null;
+}
+
+function refundDecisionReasonFromState(value: string | undefined): string | null {
+  if (!value) return null;
+  const marker = "\nKeputusan: ";
+  const markerIndex = value.lastIndexOf(marker);
+  return markerIndex < 0 ? null : value.slice(markerIndex + marker.length);
+}
+
+function refundDecisionFromState(value: string | undefined): boolean | null {
+  if (value === "APPROVED") return true;
+  if (value === "REJECTED") return false;
+  return null;
+}
+
+async function findRefundReplay(
+  transaction: Transaction,
+  tenantId: number,
+  idempotencyKey: string,
+) {
+  const scopedIdempotencyKey = refundIdempotencyKey(tenantId, idempotencyKey);
+  const [existing] = await transaction
+    .select({ refund: refunds })
+    .from(refunds)
+    .innerJoin(bookings, eq(bookings.id, refunds.bookingId))
+    .where(
+      and(
+        eq(bookings.tenantId, tenantId),
+        or(
+          eq(refunds.idempotencyKey, scopedIdempotencyKey),
+          eq(refunds.idempotencyKey, idempotencyKey),
+        ),
+      ),
+    )
+    .limit(1);
+  return existing?.refund;
+}
+
+async function assertRefundReplayMatches(
+  transaction: Transaction,
+  existing: typeof refunds.$inferSelect,
+  input: {
+    bookingId: number;
+    paymentAttemptId?: number | null | undefined;
+    amount: number;
+    kind: string;
+    reason: string;
+    requestedByUserId?: number | null | undefined;
+    decisionStatus?: "APPROVED" | "MANUAL_REQUIRED" | undefined;
+  },
+): Promise<void> {
+  const [initialTransition] = await transaction
+    .select({ toStatus: refundStateTransitions.toStatus })
+    .from(refundStateTransitions)
+    .where(
+      and(
+        eq(refundStateTransitions.refundId, existing.id),
+        isNull(refundStateTransitions.fromStatus),
+      ),
+    )
+    .limit(1);
+  const initialDecisionStatus =
+    initialTransition?.toStatus === "MANUAL_REQUIRED"
+      ? "MANUAL_REQUIRED"
+      : existing.decisionStatus;
+  const decisionMarker = "\nKeputusan: ";
+  const markerIndex = existing.reason.lastIndexOf(decisionMarker);
+  const initialReason =
+    initialDecisionStatus === "MANUAL_REQUIRED" &&
+    existing.decisionStatus !== "MANUAL_REQUIRED" &&
+    markerIndex >= 0
+      ? existing.reason.slice(0, markerIndex)
+      : existing.reason;
+  const matches =
+    existing.bookingId === input.bookingId &&
+    existing.paymentAttemptId === (input.paymentAttemptId ?? null) &&
+    existing.amount === input.amount &&
+    existing.kind === input.kind &&
+    initialReason === input.reason &&
+    initialDecisionStatus === (input.decisionStatus ?? "APPROVED") &&
+    existing.requestedByUserId === (input.requestedByUserId ?? null);
+  if (matches) return;
+  throw new ApiError(
+    409,
+    "IDEMPOTENCY_KEY_REUSED",
+    "Idempotency-Key telah digunakan untuk request refund yang berbeda.",
+  );
+}
+
+function cancellationReplayFromResponse(value: unknown): {
+  reason: string;
+  result: { status: "CANCELLED"; refundBasisPoints: number; refundableAmount: number };
+} | null {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("reason" in value) ||
+    !("result" in value)
+  ) {
+    return null;
+  }
+  const result = value.result;
+  if (
+    typeof value.reason !== "string" ||
+    !result ||
+    typeof result !== "object" ||
+    !("status" in result) ||
+    result.status !== "CANCELLED" ||
+    !("refundBasisPoints" in result) ||
+    typeof result.refundBasisPoints !== "number" ||
+    !("refundableAmount" in result) ||
+    typeof result.refundableAmount !== "number"
+  ) {
+    return null;
+  }
+  return {
+    reason: value.reason,
+    result: {
+      status: "CANCELLED",
+      refundBasisPoints: result.refundBasisPoints,
+      refundableAmount: result.refundableAmount,
+    },
+  };
+}
+
+function refundCreateView(input: { id: number; kind: string }) {
+  return {
+    id: formatPublicId(input.id),
+    status: input.kind === "ADMIN_DISPUTE" ? "MANUAL_REQUIRED" : "PENDING",
+  };
+}
+
+function isDuplicateEntry(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const cause = "cause" in error ? error.cause : undefined;
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    String(cause.code) === "ER_DUP_ENTRY"
+  );
 }

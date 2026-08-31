@@ -13,6 +13,7 @@ import type { FinanceService } from "../../finance/FinanceService.js";
 import type { NotificationService } from "../../identity/notifications/NotificationService.js";
 
 const JOB_LOCK_SECONDS = 55;
+const ROLLING_DEPLOY_RECONCILIATION_WINDOW_MS = 48 * 60 * 60_000;
 
 export class MaintenanceJobs {
   constructor(
@@ -79,6 +80,15 @@ export class MaintenanceJobs {
       const refunded = await this.refundService.completePendingBatch();
       const publishResult = await this.outboxPublisher.publishPending();
       const orphanUploadsDeleted = await this.mediaService.cleanupOrphanUploads();
+      const now = new Date();
+      const rollingDeploymentCutoff = new Date(
+        now.getTime() - ROLLING_DEPLOY_RECONCILIATION_WINDOW_MS,
+      );
+      await this.financeService.reconcileLegacyRefundLedgers(
+        100,
+        now,
+        rollingDeploymentCutoff,
+      );
       const earningsReleased = await this.financeService.releaseAvailableEarnings();
       const remindersCaptured = await this.notificationService.captureDueReminders();
       const rescheduleAdjustmentsExpired =

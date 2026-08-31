@@ -1,5 +1,17 @@
 import ExcelJS from "exceljs";
-import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  like,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { DatabaseConnection } from "../database/client.js";
 import { formatPublicId, parsePublicId } from "../database/ids.js";
 import {
@@ -273,6 +285,12 @@ export class FinanceService {
         { accountCode: "CUSTOMER_FUNDS_HELD", debit: 0, credit: amount },
       ],
     });
+    const [booking] = await transaction
+      .select({ status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (booking?.status === "EXPIRED" || booking?.status === "CANCELLED") return;
     const [snapshot] = await transaction
       .select()
       .from(bookingFinancialSnapshots)
@@ -310,6 +328,38 @@ export class FinanceService {
       .onDuplicateKeyUpdate({
         set: { amount: Math.min(snapshot.ownerNet, earnedAmount), updatedAt: now },
       });
+  }
+
+  async syncOwnerEarningToLatestSnapshot(
+    transaction: Transaction,
+    bookingId: number,
+    now: Date,
+  ): Promise<void> {
+    const [snapshot] = await transaction
+      .select()
+      .from(bookingFinancialSnapshots)
+      .where(eq(bookingFinancialSnapshots.bookingId, bookingId))
+      .orderBy(desc(bookingFinancialSnapshots.bookingVersion))
+      .limit(1);
+    const [summary] = await transaction
+      .select({ totalPaid: bookingPaymentSummaries.totalPaid })
+      .from(bookingPaymentSummaries)
+      .where(eq(bookingPaymentSummaries.bookingId, bookingId))
+      .limit(1)
+      .for("update");
+    if (!snapshot || !summary) return;
+    const customerTotal = snapshotCustomerTotal(snapshot);
+    const amount =
+      customerTotal > 0
+        ? Math.min(
+            snapshot.ownerNet,
+            Math.floor((snapshot.ownerNet * summary.totalPaid) / customerTotal),
+          )
+        : 0;
+    await transaction
+      .update(ownerEarnings)
+      .set({ snapshotId: snapshot.id, amount, updatedAt: now })
+      .where(eq(ownerEarnings.sourceKey, `booking:${bookingId}`));
   }
 
   async releaseUnusedFinancialReservations(
@@ -389,7 +439,11 @@ export class FinanceService {
       .limit(1);
     if (!summary || summary.totalPaid <= 0) return;
     const entries: LedgerEntryInput[] = [
-      { accountCode: "CUSTOMER_FUNDS_HELD", debit: summary.totalPaid, credit: 0 },
+      {
+        accountCode: "CUSTOMER_FUNDS_HELD",
+        debit: snapshotCustomerTotal(snapshot),
+        credit: 0,
+      },
       { accountCode: "OWNER_PAYABLE", debit: 0, credit: snapshot.ownerNet },
       {
         accountCode: "PLATFORM_COMMISSION_REVENUE",
@@ -426,6 +480,18 @@ export class FinanceService {
       description: "Booking selesai, commission earned",
       entries,
     });
+    const { cumulativeRefund, entries: refundEntries } =
+      await this.refundLedgerCorrection(transaction, bookingId);
+    if (refundEntries.length > 0) {
+      await this.postLedger(transaction, {
+        tenantId: await tenantIdForBooking(transaction, bookingId),
+        bookingId,
+        kind: "REFUND_RECONCILIATION",
+        idempotencyKey: `refund-after-completion:${bookingId}:${cumulativeRefund}`,
+        description: "Koreksi refund yang diproses sebelum booking selesai",
+        entries: refundEntries,
+      });
+    }
     await transaction
       .update(ownerEarnings)
       .set({
@@ -433,7 +499,12 @@ export class FinanceService {
         availableAt: new Date(completedAt.getTime() + 24 * 60 * 60_000),
         updatedAt: completedAt,
       })
-      .where(eq(ownerEarnings.sourceKey, `booking:${bookingId}`));
+      .where(
+        and(
+          eq(ownerEarnings.bookingId, bookingId),
+          eq(ownerEarnings.status, "PENDING"),
+        ),
+      );
   }
 
   async recordRefund(
@@ -443,87 +514,77 @@ export class FinanceService {
     amount: number,
     now: Date,
   ): Promise<void> {
+    const tenantId = await tenantIdForBooking(transaction, bookingId);
+    await lockTenantFinance(transaction, tenantId);
+    const { semanticRefund, entries, ownerReversal, snapshot } =
+      await this.refundLedgerCorrection(transaction, bookingId);
+    const cashEntry = entries.find((entry) => entry.accountCode === "SANDBOX_CASH");
+    if ((cashEntry?.credit ?? 0) - (cashEntry?.debit ?? 0) !== amount) {
+      throw new Error("REFUND_LEDGER_AMOUNT_MISMATCH");
+    }
     await this.postLedger(transaction, {
-      tenantId: await tenantIdForBooking(transaction, bookingId),
+      tenantId,
       bookingId,
       kind: "REFUND_SUCCEEDED",
       idempotencyKey: `refund:${refundId}`,
       description: "Refund sandbox berhasil",
-      entries: [
-        { accountCode: "REFUND_EXPENSE", debit: amount, credit: 0 },
-        { accountCode: "SANDBOX_CASH", debit: 0, credit: amount },
-      ],
+      entries,
     });
     const [earning] = await transaction
       .select()
       .from(ownerEarnings)
-      .where(eq(ownerEarnings.bookingId, bookingId))
+      .where(
+        and(
+          eq(ownerEarnings.bookingId, bookingId),
+          eq(ownerEarnings.sourceKey, `booking:${bookingId}`),
+        ),
+      )
       .limit(1)
       .for("update");
     if (!earning) return;
-    const [snapshot] = await transaction
-      .select()
-      .from(bookingFinancialSnapshots)
-      .where(eq(bookingFinancialSnapshots.id, earning.snapshotId))
-      .limit(1);
     if (!snapshot) return;
     const customerTotal =
       snapshot.courtSubtotal +
       snapshot.addonSubtotal -
       snapshot.ownerDiscount -
       snapshot.platformDiscount;
-    const ownerReversal =
-      customerTotal > 0
-        ? Math.min(
-            Math.abs(earning.amount),
-            Math.ceil((snapshot.ownerNet * amount) / customerTotal),
-          )
-        : 0;
-    if (ownerReversal === 0) return;
-    const fullReversal = amount >= customerTotal;
-    if (fullReversal && earning.status !== "PAID_OUT") {
+    const priorAdjustments = await transaction
+      .select({ id: ownerEarnings.id, amount: ownerEarnings.amount })
+      .from(ownerEarnings)
+      .where(refundEarningScope(bookingId));
+    const priorOwnerReversal = -sumBy(priorAdjustments, (row) => row.amount);
+    const ownerReversalDelta = Math.max(0, ownerReversal - priorOwnerReversal);
+    if (
+      earning.status === "RESERVED_FOR_PAYOUT" &&
+      (await this.cancelPayoutContainingEarning(
+        transaction,
+        earning.id,
+        `Refund Rp${amount} untuk booking ${bookingId}`,
+        now,
+      ))
+    ) {
+      earning.status = "AVAILABLE";
+    }
+    const fullReversal = customerTotal > 0 && semanticRefund >= customerTotal;
+    if (
+      fullReversal &&
+      earning.status !== "PAID_OUT" &&
+      earning.status !== "RESERVED_FOR_PAYOUT"
+    ) {
       await transaction
         .update(ownerEarnings)
         .set({ status: "REVERSED", updatedAt: now })
-        .where(eq(ownerEarnings.id, earning.id));
+        .where(or(eq(ownerEarnings.id, earning.id), refundEarningScope(bookingId)));
       return;
     }
-    if (earning.status === "RESERVED_FOR_PAYOUT") {
-      const [reserved] = await transaction
-        .select({ batch: payoutBatches })
-        .from(payoutItems)
-        .innerJoin(payoutBatches, eq(payoutBatches.id, payoutItems.payoutBatchId))
-        .where(eq(payoutItems.earningId, earning.id))
-        .limit(1)
-        .for("update");
-      if (reserved?.batch.status === "SCHEDULED") {
-        const batchItems = await transaction
-          .select()
-          .from(payoutItems)
-          .where(eq(payoutItems.payoutBatchId, reserved.batch.id));
-        await transaction
-          .update(payoutBatches)
-          .set({ status: "CANCELLED", updatedAt: now })
-          .where(eq(payoutBatches.id, reserved.batch.id));
-        await transaction
-          .update(ownerEarnings)
-          .set({ status: "AVAILABLE", updatedAt: now })
-          .where(
-            inArray(
-              ownerEarnings.id,
-              batchItems.map((item) => item.earningId),
-            ),
-          );
-        earning.status = "AVAILABLE";
-      }
-    }
+    if (ownerReversalDelta === 0) return;
     if (earning.status === "PAID_OUT") {
       await transaction.insert(ownerEarnings).values({
         tenantId: earning.tenantId,
         bookingId,
         snapshotId: earning.snapshotId,
         sourceKey: `refund:${refundId}`,
-        amount: -ownerReversal,
+        amount: -ownerReversalDelta,
         status: "AVAILABLE",
         availableAt: now,
         updatedAt: now,
@@ -534,12 +595,87 @@ export class FinanceService {
         bookingId,
         snapshotId: earning.snapshotId,
         sourceKey: `refund:${refundId}`,
-        amount: -ownerReversal,
+        amount: -ownerReversalDelta,
         status: earning.status === "PENDING" ? "PENDING" : "AVAILABLE",
         availableAt: earning.availableAt,
         updatedAt: now,
       });
     }
+  }
+
+  async reconcileLegacyRefundLedgers(
+    batchSize = 100,
+    now = new Date(),
+    since?: Date,
+  ): Promise<number> {
+    let reconciled = 0;
+    let bookingCursor = 0;
+    while (true) {
+      const candidates = await this.database.db
+        .select({ bookingId: ledgerTransactions.bookingId })
+        .from(ledgerTransactions)
+        .where(
+          and(
+            eq(ledgerTransactions.kind, "REFUND_SUCCEEDED"),
+            gt(ledgerTransactions.bookingId, bookingCursor),
+            since ? gte(ledgerTransactions.createdAt, since) : undefined,
+          ),
+        )
+        .groupBy(ledgerTransactions.bookingId)
+        .orderBy(ledgerTransactions.bookingId)
+        .limit(batchSize);
+      if (candidates.length === 0) break;
+      for (const candidate of candidates) {
+        if (candidate.bookingId === null) continue;
+        const corrected = await this.database.db.transaction(async (transaction) => {
+          const tenantId = await tenantIdForBooking(transaction, candidate.bookingId!);
+          await lockTenantFinance(transaction, tenantId);
+          const { cumulativeRefund, entries, ownerReversal, snapshot } =
+            await this.refundLedgerCorrection(transaction, candidate.bookingId!);
+          const earningCorrection = await this.reconcileLegacyOwnerEarning(
+            transaction,
+            candidate.bookingId!,
+            snapshot,
+            ownerReversal,
+            cumulativeRefund,
+            now,
+          );
+          const cashEntry = entries.find(
+            (entry) => entry.accountCode === "SANDBOX_CASH",
+          );
+          if ((cashEntry?.credit ?? 0) - (cashEntry?.debit ?? 0) !== 0) {
+            throw new Error("REFUND_RECONCILIATION_CASH_MISMATCH");
+          }
+          const ledgerCorrected = entries.length > 0;
+          if (ledgerCorrected) {
+            await this.postLedger(transaction, {
+              tenantId,
+              bookingId: candidate.bookingId!,
+              kind: "REFUND_RECONCILIATION",
+              idempotencyKey: `refund-reconciliation:${candidate.bookingId}:${cumulativeRefund}`,
+              description: "Koreksi semantic ledger refund legacy",
+              entries,
+            });
+          }
+          if (ledgerCorrected || earningCorrection !== 0) {
+            await transaction.insert(auditLogs).values({
+              tenantId,
+              actorUserId: null,
+              action: "finance.refund_reconciled",
+              resourceType: "booking",
+              resourceId: candidate.bookingId!,
+              reason: "Koreksi ledger dan owner earning refund legacy saat migration",
+              afterState: { ledgerCorrected, earningCorrection },
+            });
+          }
+          return ledgerCorrected || earningCorrection !== 0;
+        });
+        if (corrected) reconciled += 1;
+      }
+      bookingCursor = candidates.at(-1)?.bookingId ?? bookingCursor;
+      if (candidates.length < batchSize) break;
+    }
+    return reconciled;
   }
 
   async releaseAvailableEarnings(limit = 100, now = new Date()): Promise<number> {
@@ -591,6 +727,7 @@ export class FinanceService {
   ): Promise<{ id: string; totalAmount: number; status: string }> {
     return this.database.db.transaction(async (transaction) => {
       const tenantDatabaseId = parsePublicId(tenantId);
+      await lockTenantFinance(transaction, tenantDatabaseId);
       const [existing] = await transaction
         .select()
         .from(payoutBatches)
@@ -736,6 +873,14 @@ export class FinanceService {
   ): Promise<void> {
     await this.database.db.transaction(async (transaction) => {
       const payoutDatabaseId = parsePublicId(payoutId);
+      const [batchReference] = await transaction
+        .select({ tenantId: payoutBatches.tenantId })
+        .from(payoutBatches)
+        .where(eq(payoutBatches.id, payoutDatabaseId))
+        .limit(1);
+      if (!batchReference)
+        throw new ApiError(404, "PAYOUT_NOT_FOUND", "Payout tidak ditemukan.");
+      await lockTenantFinance(transaction, batchReference.tenantId);
       const [batch] = await transaction
         .select()
         .from(payoutBatches)
@@ -746,7 +891,10 @@ export class FinanceService {
         throw new ApiError(404, "PAYOUT_NOT_FOUND", "Payout tidak ditemukan.");
       const actorDatabaseId = parsePublicId(actorUserId);
       const [existingCommand] = await transaction
-        .select({ resourceId: commandIdempotency.resourceId })
+        .select({
+          resourceId: commandIdempotency.resourceId,
+          responseBody: commandIdempotency.responseBody,
+        })
         .from(commandIdempotency)
         .where(
           and(
@@ -757,7 +905,18 @@ export class FinanceService {
         )
         .limit(1);
       if (existingCommand) {
-        if (existingCommand.resourceId === batch.id) return;
+        if (existingCommand.resourceId === batch.id) {
+          const recordedStatus = payoutStatusFromResponse(existingCommand.responseBody);
+          const recordedReason = payoutReasonFromResponse(existingCommand.responseBody);
+          if (recordedStatus === status && recordedReason === reason) return;
+          throw new ApiError(
+            409,
+            "IDEMPOTENCY_KEY_REUSED",
+            recordedStatus === null || recordedReason === null
+              ? "Idempotency-Key payout legacy tidak dapat diverifikasi; gunakan key baru."
+              : "Idempotency-Key telah digunakan untuk perubahan payout yang berbeda.",
+          );
+        }
         throw new ApiError(
           409,
           "IDEMPOTENCY_KEY_REUSED",
@@ -771,6 +930,7 @@ export class FinanceService {
           actorUserId: actorDatabaseId,
           resourceId: batch.id,
           responseStatus: 204,
+          responseBody: { status, reason },
         });
         return;
       }
@@ -815,7 +975,7 @@ export class FinanceService {
             { accountCode: "SANDBOX_PAYOUT", debit: 0, credit: batch.totalAmount },
           ],
         });
-      } else if (status === "FAILED" || status === "CANCELLED") {
+      } else if (status === "CANCELLED") {
         await transaction
           .update(ownerEarnings)
           .set({ status: "AVAILABLE", updatedAt: now })
@@ -826,24 +986,14 @@ export class FinanceService {
             ),
           );
       }
-      await transaction.insert(auditLogs).values({
+      await this.recordPayoutStatusChange(transaction, {
+        batchId: batch.id,
         tenantId: batch.tenantId,
         actorUserId: actorDatabaseId,
-        action: "payout.status_changed",
-        resourceType: "payout",
-        resourceId: batch.id,
+        beforeStatus: batch.status,
+        status,
         reason,
-        beforeState: { status: batch.status },
-        afterState: { status },
-      });
-      await transaction.insert(outboxEvents).values({
-        tenantId: batch.tenantId,
-        eventType: "payout.status_changed",
-        resourceType: "payout",
-        resourceId: batch.id,
-        resourceVersion: Math.floor(now.getTime() / 1_000),
-        payload: { status, hint: "refetch-finance" },
-        occurredAt: now,
+        now,
       });
       await transaction.insert(commandIdempotency).values({
         scope: "payout.status",
@@ -851,6 +1001,7 @@ export class FinanceService {
         actorUserId: actorDatabaseId,
         resourceId: batch.id,
         responseStatus: 204,
+        responseBody: { status, reason },
       });
     });
   }
@@ -943,10 +1094,13 @@ export class FinanceService {
       .where(and(bookingScope, eq(refunds.status, "SUCCEEDED")));
     const comparisonRows = await this.database.db
       .select({
+        bookingId: bookings.id,
+        itemId: bookingItems.id,
         venueId: venues.id,
         venueName: venues.name,
         courtId: courts.id,
         courtName: courts.name,
+        itemSubtotal: bookingItems.subtotal,
         paid: bookingPaymentSummaries.totalPaid,
       })
       .from(bookings)
@@ -964,19 +1118,40 @@ export class FinanceService {
       number,
       { name: string; venueName: string; paid: number }
     >();
+    const comparisonRowsByBooking = new Map<number, typeof comparisonRows>();
     for (const row of bookingRows) {
       const date = row.booking.createdAt.toISOString().slice(0, 10);
       trends.set(date, (trends.get(date) ?? 0) + (row.payment?.totalPaid ?? 0));
     }
     for (const row of comparisonRows) {
-      venueTotals.set(row.venueId, {
-        name: row.venueName,
-        paid: (venueTotals.get(row.venueId)?.paid ?? 0) + (row.paid ?? 0),
+      const rows = comparisonRowsByBooking.get(row.bookingId) ?? [];
+      rows.push(row);
+      comparisonRowsByBooking.set(row.bookingId, rows);
+    }
+    for (const rows of comparisonRowsByBooking.values()) {
+      const sortedRows = [...rows].sort((left, right) => left.itemId - right.itemId);
+      const first = sortedRows[0];
+      if (!first) continue;
+      const paid = first.paid ?? 0;
+      venueTotals.set(first.venueId, {
+        name: first.venueName,
+        paid: (venueTotals.get(first.venueId)?.paid ?? 0) + paid,
       });
-      courtTotals.set(row.courtId, {
-        name: row.courtName,
-        venueName: row.venueName,
-        paid: (courtTotals.get(row.courtId)?.paid ?? 0) + (row.paid ?? 0),
+      const totalSubtotal = sumBy(sortedRows, (row) => row.itemSubtotal);
+      let allocated = 0;
+      sortedRows.forEach((row, index) => {
+        const courtPaid =
+          index === sortedRows.length - 1
+            ? paid - allocated
+            : totalSubtotal > 0
+              ? Math.floor((paid * row.itemSubtotal) / totalSubtotal)
+              : 0;
+        allocated += courtPaid;
+        courtTotals.set(row.courtId, {
+          name: row.courtName,
+          venueName: row.venueName,
+          paid: (courtTotals.get(row.courtId)?.paid ?? 0) + courtPaid,
+        });
       });
     }
     return {
@@ -1004,7 +1179,7 @@ export class FinanceService {
         (row) =>
           (row.snapshot?.ownerDiscount ?? 0) + (row.snapshot?.platformDiscount ?? 0),
       ),
-      commission: sumBy(bookingRows, (row) => row.snapshot?.platformCommission ?? 0),
+      commission: await this.recognizedCommission(bookingScope),
       refunds: sumBy(refundRows, (row) => row.amount),
       pendingBalance: sumBy(
         earningRows.filter(
@@ -1020,7 +1195,10 @@ export class FinanceService {
         earningRows.filter((row) => row.status === "PAID_OUT"),
         (row) => row.amount,
       ),
-      netOwnerRevenue: sumBy(bookingRows, (row) => row.snapshot?.ownerNet ?? 0),
+      netOwnerRevenue: sumBy(
+        earningRows.filter((row) => row.status !== "REVERSED"),
+        (row) => row.amount,
+      ),
       dpPaid: sumBy(
         bookingRows.filter((row) => row.booking.paymentMode === "DP"),
         (row) => row.payment?.totalPaid ?? 0,
@@ -1253,8 +1431,13 @@ export class FinanceService {
       const actorUserId = parsePublicId(input.actorUserId);
       const tenantDatabaseId = input.tenantId ? parsePublicId(input.tenantId) : null;
       const scope = tenantCommandScope("commission.create", input.tenantId);
+      const fingerprint = commissionCommandFingerprint(input, tenantDatabaseId);
       const [existing] = await transaction
-        .select({ resourceId: commandIdempotency.resourceId })
+        .select({
+          resourceId: commandIdempotency.resourceId,
+          responseBody: commandIdempotency.responseBody,
+          config: commissionConfigs,
+        })
         .from(commandIdempotency)
         .innerJoin(
           commissionConfigs,
@@ -1268,11 +1451,24 @@ export class FinanceService {
           ),
         )
         .limit(1);
-      if (existing?.resourceId) return { id: formatPublicId(existing.resourceId) };
+      if (existing?.resourceId) {
+        assertCommandReplay(
+          existing.responseBody,
+          fingerprint,
+          commissionConfigMatches(
+            existing.config,
+            input,
+            tenantDatabaseId,
+            actorUserId,
+          ),
+        );
+        return { id: formatPublicId(existing.resourceId) };
+      }
       const [legacy] = await transaction
         .select({
           resourceId: commandIdempotency.resourceId,
-          tenantId: commissionConfigs.tenantId,
+          responseBody: commandIdempotency.responseBody,
+          config: commissionConfigs,
         })
         .from(commandIdempotency)
         .innerJoin(
@@ -1287,8 +1483,55 @@ export class FinanceService {
           ),
         )
         .limit(1);
-      if (legacy?.resourceId && legacy.tenantId === tenantDatabaseId) {
+      if (legacy?.resourceId && legacy.config.tenantId === tenantDatabaseId) {
+        assertCommandReplay(
+          legacy.responseBody,
+          fingerprint,
+          commissionConfigMatches(legacy.config, input, tenantDatabaseId, actorUserId),
+        );
         return { id: formatPublicId(legacy.resourceId) };
+      }
+      try {
+        await transaction.insert(commandIdempotency).values({
+          scope,
+          idempotencyKey: input.idempotencyKey,
+          actorUserId,
+          responseBody: { fingerprint },
+        });
+      } catch (error) {
+        if (!isDuplicateEntry(error)) throw error;
+        const [concurrent] = await transaction
+          .select({
+            resourceId: commandIdempotency.resourceId,
+            responseBody: commandIdempotency.responseBody,
+            config: commissionConfigs,
+          })
+          .from(commandIdempotency)
+          .innerJoin(
+            commissionConfigs,
+            eq(commissionConfigs.id, commandIdempotency.resourceId),
+          )
+          .where(
+            and(
+              eq(commandIdempotency.scope, scope),
+              eq(commandIdempotency.actorUserId, actorUserId),
+              eq(commandIdempotency.idempotencyKey, input.idempotencyKey),
+            ),
+          )
+          .limit(1)
+          .for("update");
+        if (!concurrent?.resourceId) throw error;
+        assertCommandReplay(
+          concurrent.responseBody,
+          fingerprint,
+          commissionConfigMatches(
+            concurrent.config,
+            input,
+            tenantDatabaseId,
+            actorUserId,
+          ),
+        );
+        return { id: formatPublicId(concurrent.resourceId) };
       }
       const createdRows = await transaction
         .insert(commissionConfigs)
@@ -1322,14 +1565,20 @@ export class FinanceService {
         },
         ...auditContext,
       });
-      await transaction.insert(commandIdempotency).values({
-        scope,
-        idempotencyKey: input.idempotencyKey,
-        actorUserId,
-        resourceId: created.id,
-        responseStatus: 201,
-        responseBody: { id: formatPublicId(created.id) },
-      });
+      await transaction
+        .update(commandIdempotency)
+        .set({
+          resourceId: created.id,
+          responseStatus: 201,
+          responseBody: { id: formatPublicId(created.id), fingerprint },
+        })
+        .where(
+          and(
+            eq(commandIdempotency.scope, scope),
+            eq(commandIdempotency.actorUserId, actorUserId),
+            eq(commandIdempotency.idempotencyKey, input.idempotencyKey),
+          ),
+        );
       return { id: formatPublicId(created.id) };
     });
   }
@@ -1373,9 +1622,18 @@ export class FinanceService {
       const actorUserId = parsePublicId(input.actorUserId);
       const tenantDatabaseId = input.tenantId ? parsePublicId(input.tenantId) : null;
       const scope = tenantCommandScope("promotion.create", input.tenantId);
+      const fingerprint = promotionCommandFingerprint(
+        input,
+        normalizedCode,
+        tenantDatabaseId,
+      );
       await this.validatePromotionScopes(transaction, input, tenantDatabaseId);
       const [existing] = await transaction
-        .select({ resourceId: commandIdempotency.resourceId, code: promotions.code })
+        .select({
+          resourceId: commandIdempotency.resourceId,
+          responseBody: commandIdempotency.responseBody,
+          promotion: promotions,
+        })
         .from(commandIdempotency)
         .innerJoin(promotions, eq(promotions.id, commandIdempotency.resourceId))
         .where(
@@ -1387,13 +1645,25 @@ export class FinanceService {
         )
         .limit(1);
       if (existing?.resourceId) {
-        return { id: existing.resourceId, code: existing.code ?? normalizedCode };
+        await this.assertPromotionCommandReplay(
+          transaction,
+          existing.promotion,
+          existing.responseBody,
+          input,
+          normalizedCode,
+          tenantDatabaseId,
+          fingerprint,
+        );
+        return {
+          id: existing.resourceId,
+          code: existing.promotion.code ?? normalizedCode,
+        };
       }
       const [legacy] = await transaction
         .select({
           resourceId: commandIdempotency.resourceId,
-          tenantId: promotions.tenantId,
-          code: promotions.code,
+          responseBody: commandIdempotency.responseBody,
+          promotion: promotions,
         })
         .from(commandIdempotency)
         .innerJoin(promotions, eq(promotions.id, commandIdempotency.resourceId))
@@ -1405,8 +1675,61 @@ export class FinanceService {
           ),
         )
         .limit(1);
-      if (legacy?.resourceId && legacy.tenantId === tenantDatabaseId) {
-        return { id: legacy.resourceId, code: legacy.code ?? normalizedCode };
+      if (legacy?.resourceId && legacy.promotion.tenantId === tenantDatabaseId) {
+        await this.assertPromotionCommandReplay(
+          transaction,
+          legacy.promotion,
+          legacy.responseBody,
+          input,
+          normalizedCode,
+          tenantDatabaseId,
+          fingerprint,
+        );
+        return {
+          id: legacy.resourceId,
+          code: legacy.promotion.code ?? normalizedCode,
+        };
+      }
+      try {
+        await transaction.insert(commandIdempotency).values({
+          scope,
+          idempotencyKey: input.idempotencyKey,
+          actorUserId,
+          responseBody: { fingerprint },
+        });
+      } catch (error) {
+        if (!isDuplicateEntry(error)) throw error;
+        const [concurrent] = await transaction
+          .select({
+            resourceId: commandIdempotency.resourceId,
+            responseBody: commandIdempotency.responseBody,
+            promotion: promotions,
+          })
+          .from(commandIdempotency)
+          .innerJoin(promotions, eq(promotions.id, commandIdempotency.resourceId))
+          .where(
+            and(
+              eq(commandIdempotency.scope, scope),
+              eq(commandIdempotency.actorUserId, actorUserId),
+              eq(commandIdempotency.idempotencyKey, input.idempotencyKey),
+            ),
+          )
+          .limit(1)
+          .for("update");
+        if (!concurrent?.resourceId) throw error;
+        await this.assertPromotionCommandReplay(
+          transaction,
+          concurrent.promotion,
+          concurrent.responseBody,
+          input,
+          normalizedCode,
+          tenantDatabaseId,
+          fingerprint,
+        );
+        return {
+          id: concurrent.resourceId,
+          code: concurrent.promotion.code ?? normalizedCode,
+        };
       }
       const createdRows = await transaction
         .insert(promotions)
@@ -1460,17 +1783,50 @@ export class FinanceService {
         },
         ...auditContext,
       });
-      await transaction.insert(commandIdempotency).values({
-        scope,
-        idempotencyKey: input.idempotencyKey,
-        actorUserId,
-        resourceId: result.id,
-        responseStatus: 201,
-        responseBody: { id: formatPublicId(result.id), code: normalizedCode },
-      });
+      await transaction
+        .update(commandIdempotency)
+        .set({
+          resourceId: result.id,
+          responseStatus: 201,
+          responseBody: {
+            id: formatPublicId(result.id),
+            code: normalizedCode,
+            fingerprint,
+          },
+        })
+        .where(
+          and(
+            eq(commandIdempotency.scope, scope),
+            eq(commandIdempotency.actorUserId, actorUserId),
+            eq(commandIdempotency.idempotencyKey, input.idempotencyKey),
+          ),
+        );
       return { id: result.id, code: normalizedCode };
     });
     return { id: formatPublicId(created.id), code: created.code };
+  }
+
+  private async assertPromotionCommandReplay(
+    transaction: Transaction,
+    promotion: typeof promotions.$inferSelect,
+    responseBody: unknown,
+    input: PromotionInput,
+    normalizedCode: string,
+    tenantId: number | null,
+    fingerprint: string,
+  ): Promise<void> {
+    const scopes = await transaction
+      .select({
+        type: promotionScopes.scopeType,
+        referenceId: promotionScopes.scopeReferenceId,
+      })
+      .from(promotionScopes)
+      .where(eq(promotionScopes.promotionId, promotion.id));
+    assertCommandReplay(
+      responseBody,
+      fingerprint,
+      promotionMatches(promotion, scopes, input, normalizedCode, tenantId),
+    );
   }
 
   async listPromotions(tenantId?: string, allowedVenueIds?: string[]) {
@@ -1877,6 +2233,239 @@ export class FinanceService {
       .values(input.entries.map((entry) => ({ transactionId: created.id, ...entry })));
   }
 
+  private async refundLedgerCorrection(
+    transaction: Transaction,
+    bookingId: number,
+  ): Promise<{
+    cumulativeRefund: number;
+    semanticRefund: number;
+    entries: LedgerEntryInput[];
+    ownerReversal: number;
+    snapshot: typeof bookingFinancialSnapshots.$inferSelect | undefined;
+  }> {
+    const [summary] = await transaction
+      .select()
+      .from(bookingPaymentSummaries)
+      .where(eq(bookingPaymentSummaries.bookingId, bookingId))
+      .limit(1)
+      .for("update");
+    if (!summary) throw new Error("Ringkasan pembayaran refund tidak ditemukan.");
+    const [snapshot] = await transaction
+      .select()
+      .from(bookingFinancialSnapshots)
+      .where(eq(bookingFinancialSnapshots.bookingId, bookingId))
+      .orderBy(desc(bookingFinancialSnapshots.bookingVersion))
+      .limit(1);
+    const [completion] = await transaction
+      .select({ id: ledgerTransactions.id })
+      .from(ledgerTransactions)
+      .where(
+        and(
+          eq(ledgerTransactions.bookingId, bookingId),
+          eq(ledgerTransactions.kind, "BOOKING_COMPLETED"),
+        ),
+      )
+      .limit(1);
+    if (completion && !snapshot) {
+      throw new Error("REFUND_FINANCIAL_SNAPSHOT_MISSING");
+    }
+    const rescheduleRefunds = await transaction
+      .select({ amount: refunds.amount })
+      .from(refunds)
+      .where(
+        and(
+          eq(refunds.bookingId, bookingId),
+          eq(refunds.status, "SUCCEEDED"),
+          eq(refunds.kind, "RESCHEDULE_DIFFERENCE"),
+        ),
+      );
+    const rescheduleRefund = sumBy(rescheduleRefunds, (refund) => refund.amount);
+    const semanticRefund = Math.max(0, summary.totalRefunded - rescheduleRefund);
+    const priorRefundEntries = await transaction
+      .select({ entry: ledgerEntries })
+      .from(ledgerEntries)
+      .innerJoin(
+        ledgerTransactions,
+        eq(ledgerTransactions.id, ledgerEntries.transactionId),
+      )
+      .where(
+        and(
+          eq(ledgerTransactions.bookingId, bookingId),
+          inArray(ledgerTransactions.kind, [
+            "REFUND_SUCCEEDED",
+            "REFUND_RECONCILIATION",
+          ]),
+        ),
+      )
+      .for("update");
+    const desiredBalances = refundLedgerBalances(
+      semanticRefund,
+      completion ? snapshot : undefined,
+    );
+    desiredBalances.set(
+      "SANDBOX_CASH",
+      (desiredBalances.get("SANDBOX_CASH") ?? 0) - rescheduleRefund,
+    );
+    if (rescheduleRefund > 0) {
+      desiredBalances.set(
+        "CUSTOMER_FUNDS_HELD",
+        (desiredBalances.get("CUSTOMER_FUNDS_HELD") ?? 0) + rescheduleRefund,
+      );
+    }
+    const existingBalances = new Map<LedgerAccountCode, number>();
+    for (const { entry } of priorRefundEntries) {
+      const accountCode = entry.accountCode as LedgerAccountCode;
+      existingBalances.set(
+        accountCode,
+        (existingBalances.get(accountCode) ?? 0) + entry.debit - entry.credit,
+      );
+    }
+    return {
+      cumulativeRefund: summary.totalRefunded,
+      semanticRefund,
+      entries: refundLedgerDelta(desiredBalances, existingBalances),
+      ownerReversal: snapshot
+        ? refundSemanticAmounts(semanticRefund, snapshot).ownerReversal
+        : 0,
+      snapshot,
+    };
+  }
+
+  private async reconcileLegacyOwnerEarning(
+    transaction: Transaction,
+    bookingId: number,
+    snapshot: typeof bookingFinancialSnapshots.$inferSelect | undefined,
+    ownerReversal: number,
+    cumulativeRefund: number,
+    now: Date,
+  ): Promise<number> {
+    if (!snapshot) return 0;
+    let earnings = await transaction
+      .select()
+      .from(ownerEarnings)
+      .where(eq(ownerEarnings.bookingId, bookingId))
+      .for("update");
+    for (const earning of earnings.filter(
+      (candidate) => candidate.status === "RESERVED_FOR_PAYOUT",
+    )) {
+      await this.cancelPayoutContainingEarning(
+        transaction,
+        earning.id,
+        `Rekonsiliasi refund booking ${bookingId}`,
+        now,
+      );
+    }
+    earnings = await transaction
+      .select()
+      .from(ownerEarnings)
+      .where(eq(ownerEarnings.bookingId, bookingId))
+      .for("update");
+    const base = earnings.find(
+      (earning) => earning.sourceKey === `booking:${bookingId}`,
+    );
+    if (!base) return 0;
+    const recognized = sumBy(
+      earnings.filter((earning) => earning.status !== "REVERSED"),
+      (earning) => earning.amount,
+    );
+    const correction = snapshot.ownerNet - ownerReversal - recognized;
+    if (correction === 0) return 0;
+    await transaction.insert(ownerEarnings).values({
+      tenantId: base.tenantId,
+      bookingId,
+      snapshotId: snapshot.id,
+      sourceKey: `refund:reconciliation:${bookingId}:${cumulativeRefund}`,
+      amount: correction,
+      status: base.status === "PENDING" ? "PENDING" : "AVAILABLE",
+      availableAt: base.status === "PENDING" ? base.availableAt : now,
+      frozenBySupportTicketId: base.frozenBySupportTicketId,
+      updatedAt: now,
+    });
+    return correction;
+  }
+
+  private async cancelPayoutContainingEarning(
+    transaction: Transaction,
+    earningId: number,
+    reason: string,
+    now: Date,
+  ): Promise<boolean> {
+    const [reserved] = await transaction
+      .select({ batch: payoutBatches })
+      .from(payoutItems)
+      .innerJoin(payoutBatches, eq(payoutBatches.id, payoutItems.payoutBatchId))
+      .where(
+        and(
+          eq(payoutItems.earningId, earningId),
+          inArray(payoutBatches.status, ["SCHEDULED", "FAILED"]),
+        ),
+      )
+      .orderBy(desc(payoutBatches.id))
+      .limit(1)
+      .for("update");
+    if (!reserved) return false;
+    const batchItems = await transaction
+      .select()
+      .from(payoutItems)
+      .where(eq(payoutItems.payoutBatchId, reserved.batch.id));
+    await transaction
+      .update(payoutBatches)
+      .set({ status: "CANCELLED", updatedAt: now })
+      .where(eq(payoutBatches.id, reserved.batch.id));
+    await transaction
+      .update(ownerEarnings)
+      .set({ status: "AVAILABLE", updatedAt: now })
+      .where(
+        inArray(
+          ownerEarnings.id,
+          batchItems.map((item) => item.earningId),
+        ),
+      );
+    await this.recordPayoutStatusChange(transaction, {
+      batchId: reserved.batch.id,
+      tenantId: reserved.batch.tenantId,
+      actorUserId: null,
+      beforeStatus: reserved.batch.status,
+      status: "CANCELLED",
+      reason,
+      now,
+    });
+    return true;
+  }
+
+  private async recordPayoutStatusChange(
+    transaction: Transaction,
+    input: {
+      batchId: number;
+      tenantId: number;
+      actorUserId: number | null;
+      beforeStatus: string;
+      status: string;
+      reason: string;
+      now: Date;
+    },
+  ): Promise<void> {
+    await transaction.insert(auditLogs).values({
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      action: "payout.status_changed",
+      resourceType: "payout",
+      resourceId: input.batchId,
+      reason: input.reason,
+      beforeState: { status: input.beforeStatus },
+      afterState: { status: input.status },
+    });
+    await transaction.insert(outboxEvents).values({
+      tenantId: input.tenantId,
+      eventType: "payout.status_changed",
+      resourceType: "payout",
+      resourceId: input.batchId,
+      resourceVersion: Math.floor(input.now.getTime() / 1_000),
+      payload: { status: input.status, hint: "refetch-finance" },
+      occurredAt: input.now,
+    });
+  }
+
   private async exportRows(
     tenantId: number,
     dataset: string,
@@ -1899,10 +2488,9 @@ export class FinanceService {
       );
     }
     if (dataset === "promotions") {
-      return (await this.listPromotions(formatPublicId(tenantId))).map((row) => ({
-        sandbox: true,
-        ...row,
-      }));
+      return (await this.listPromotions(formatPublicId(tenantId), venueIds)).map(
+        (row) => ({ sandbox: true, ...row }),
+      );
     }
     if (dataset === "refunds") {
       return this.database.db
@@ -1967,6 +2555,23 @@ export class FinanceService {
       .from(bookings)
       .where(and(bookingScope, sourceFilter));
   }
+
+  private async recognizedCommission(
+    bookingScope: ReturnType<typeof and>,
+  ): Promise<number> {
+    const rows = await this.database.db
+      .select({ debit: ledgerEntries.debit, credit: ledgerEntries.credit })
+      .from(ledgerEntries)
+      .innerJoin(
+        ledgerTransactions,
+        eq(ledgerTransactions.id, ledgerEntries.transactionId),
+      )
+      .innerJoin(bookings, eq(bookings.id, ledgerTransactions.bookingId))
+      .where(
+        and(bookingScope, eq(ledgerEntries.accountCode, "PLATFORM_COMMISSION_REVENUE")),
+      );
+    return sumBy(rows, (row) => row.credit - row.debit);
+  }
 }
 
 function weeklyPayoutKey(date: Date): string {
@@ -1986,6 +2591,83 @@ interface LedgerEntryInput {
   accountCode: LedgerAccountCode;
   debit: number;
   credit: number;
+}
+
+function refundLedgerBalances(
+  cumulativeRefund: number,
+  snapshot: typeof bookingFinancialSnapshots.$inferSelect | undefined,
+): Map<LedgerAccountCode, number> {
+  const balances = new Map<LedgerAccountCode, number>([
+    ["SANDBOX_CASH", -cumulativeRefund],
+  ]);
+  if (!snapshot) {
+    balances.set("CUSTOMER_FUNDS_HELD", cumulativeRefund);
+    return balances;
+  }
+  const { promotionReversal, commissionReversal, gatewayFeeExpense, ownerReversal } =
+    refundSemanticAmounts(cumulativeRefund, snapshot);
+  balances.set("OWNER_PAYABLE", ownerReversal);
+  balances.set("PLATFORM_COMMISSION_REVENUE", commissionReversal);
+  if (promotionReversal > 0) {
+    balances.set("PLATFORM_PROMO_EXPENSE", -promotionReversal);
+  }
+  if (gatewayFeeExpense > 0) balances.set("REFUND_EXPENSE", gatewayFeeExpense);
+  return balances;
+}
+
+function refundSemanticAmounts(
+  cumulativeRefund: number,
+  snapshot: typeof bookingFinancialSnapshots.$inferSelect,
+) {
+  const customerTotal =
+    snapshot.courtSubtotal +
+    snapshot.addonSubtotal -
+    snapshot.ownerDiscount -
+    snapshot.platformDiscount;
+  if (customerTotal <= 0) throw new Error("REFUND_CUSTOMER_TOTAL_INVALID");
+  const refunded = Math.min(cumulativeRefund, customerTotal);
+  const proportional = (value: number) =>
+    refunded === customerTotal ? value : Math.floor((value * refunded) / customerTotal);
+  const promotionReversal = proportional(snapshot.platformDiscount);
+  const commissionReversal = proportional(snapshot.platformCommission);
+  const gatewayFeeExpense =
+    snapshot.gatewayFeeFunding === "OWNER" ? proportional(snapshot.gatewayFee) : 0;
+  return {
+    promotionReversal,
+    commissionReversal,
+    gatewayFeeExpense,
+    ownerReversal:
+      refunded + promotionReversal - commissionReversal - gatewayFeeExpense,
+  };
+}
+
+function snapshotCustomerTotal(
+  snapshot: typeof bookingFinancialSnapshots.$inferSelect,
+): number {
+  return (
+    snapshot.courtSubtotal +
+    snapshot.addonSubtotal -
+    snapshot.ownerDiscount -
+    snapshot.platformDiscount
+  );
+}
+
+function refundLedgerDelta(
+  desired: Map<LedgerAccountCode, number>,
+  existing: Map<LedgerAccountCode, number>,
+): LedgerEntryInput[] {
+  const accounts = new Set([...desired.keys(), ...existing.keys()]);
+  return [...accounts]
+    .map((accountCode): LedgerEntryInput | null => {
+      const delta = (desired.get(accountCode) ?? 0) - (existing.get(accountCode) ?? 0);
+      if (delta === 0) return null;
+      return {
+        accountCode,
+        debit: Math.max(0, delta),
+        credit: Math.max(0, -delta),
+      };
+    })
+    .filter((entry): entry is LedgerEntryInput => entry !== null);
 }
 
 function discountForPromotion(
@@ -2013,6 +2695,30 @@ async function tenantIdForBooking(
   return booking.tenantId;
 }
 
+async function lockTenantFinance(
+  transaction: Transaction,
+  tenantId: number,
+): Promise<void> {
+  // ponytail: tenant-wide finance serialization; narrow only if measured throughput requires it.
+  const [tenant] = await transaction
+    .select({ id: tenants.id })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1)
+    .for("update");
+  if (!tenant) throw new Error("Tenant finance tidak ditemukan.");
+}
+
+function refundEarningScope(bookingId: number) {
+  return and(
+    eq(ownerEarnings.bookingId, bookingId),
+    or(
+      like(ownerEarnings.sourceKey, "refund:%"),
+      like(ownerEarnings.sourceKey, "refund-reconciliation:%"),
+    ),
+  );
+}
+
 function sumBy<T>(items: readonly T[], selector: (item: T) => number): number {
   return items.reduce((total, item) => total + selector(item), 0);
 }
@@ -2027,6 +2733,24 @@ function payoutView(row: typeof payoutBatches.$inferSelect) {
     sandbox: true as const,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+function payoutStatusFromResponse(
+  value: unknown,
+): "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | null {
+  if (!value || typeof value !== "object" || !("status" in value)) return null;
+  const status = value.status;
+  return status === "PROCESSING" ||
+    status === "SUCCEEDED" ||
+    status === "FAILED" ||
+    status === "CANCELLED"
+    ? status
+    : null;
+}
+
+function payoutReasonFromResponse(value: unknown): string | null {
+  if (!value || typeof value !== "object" || !("reason" in value)) return null;
+  return typeof value.reason === "string" ? value.reason : null;
 }
 
 function csvCell(value: unknown): string {
@@ -2051,4 +2775,147 @@ function tenantCommandScope(
   tenantId: string | null,
 ) {
   return `${command}:${tenantId ?? "platform"}`;
+}
+
+function commissionCommandFingerprint(
+  input: Parameters<FinanceService["createCommissionConfig"]>[0],
+  tenantId: number | null,
+): string {
+  return JSON.stringify({
+    tenantId,
+    rateBasisPoints: input.rateBasisPoints,
+    effectiveFrom: input.effectiveFrom.toISOString(),
+    effectiveTo: input.effectiveTo?.toISOString() ?? null,
+    trialDays: input.trialDays ?? null,
+    trialCompletedBookingLimit: input.trialCompletedBookingLimit ?? null,
+    gatewayFeeFunding: input.gatewayFeeFunding,
+    gatewayFeeBasisPoints: input.gatewayFeeBasisPoints ?? 250,
+    subsidyBudget: input.subsidyBudget ?? null,
+    reason: input.reason,
+  });
+}
+
+function commissionConfigMatches(
+  config: typeof commissionConfigs.$inferSelect,
+  input: Parameters<FinanceService["createCommissionConfig"]>[0],
+  tenantId: number | null,
+  actorUserId: number,
+): boolean {
+  return (
+    config.tenantId === tenantId &&
+    config.rateBasisPoints === input.rateBasisPoints &&
+    config.effectiveFrom.getTime() === input.effectiveFrom.getTime() &&
+    (config.effectiveTo?.getTime() ?? null) ===
+      (input.effectiveTo?.getTime() ?? null) &&
+    config.trialDays === (input.trialDays ?? null) &&
+    config.trialCompletedBookingLimit === (input.trialCompletedBookingLimit ?? null) &&
+    config.gatewayFeeFunding === input.gatewayFeeFunding &&
+    config.gatewayFeeBasisPoints === (input.gatewayFeeBasisPoints ?? 250) &&
+    config.subsidyBudget === (input.subsidyBudget ?? null) &&
+    config.reason === input.reason &&
+    config.createdByUserId === actorUserId
+  );
+}
+
+function promotionCommandFingerprint(
+  input: PromotionInput,
+  normalizedCode: string,
+  tenantId: number | null,
+): string {
+  return JSON.stringify({
+    tenantId,
+    code: normalizedCode,
+    name: input.name,
+    description: input.description ?? null,
+    discountType: input.discountType,
+    discountValue: input.discountValue,
+    minimumAmount: input.minimumAmount ?? 0,
+    maximumDiscount: input.maximumDiscount ?? null,
+    startsAt: input.startsAt.toISOString(),
+    endsAt: input.endsAt.toISOString(),
+    startsAtTime: input.startsAtTime ?? null,
+    endsAtTime: input.endsAtTime ?? null,
+    quota: input.quota ?? null,
+    perUserLimit: input.perUserLimit ?? 1,
+    firstBookingOnly: input.firstBookingOnly ?? false,
+    paymentMethod: input.paymentMethod ?? null,
+    fundingSource: input.fundingSource,
+    budgetAmount: input.budgetAmount ?? null,
+    scopes: canonicalPromotionScopes(input.scopes),
+    reason: input.reason ?? null,
+  });
+}
+
+function promotionMatches(
+  promotion: typeof promotions.$inferSelect,
+  scopes: Array<{ type: string; referenceId: number | null }>,
+  input: PromotionInput,
+  normalizedCode: string,
+  tenantId: number | null,
+): boolean {
+  return (
+    promotion.tenantId === tenantId &&
+    promotion.code === normalizedCode &&
+    promotion.name === input.name &&
+    promotion.description === (input.description ?? null) &&
+    promotion.discountType === input.discountType &&
+    promotion.discountValue === input.discountValue &&
+    promotion.minimumAmount === (input.minimumAmount ?? 0) &&
+    promotion.maximumDiscount === (input.maximumDiscount ?? null) &&
+    promotion.startsAt.getTime() === input.startsAt.getTime() &&
+    promotion.endsAt.getTime() === input.endsAt.getTime() &&
+    promotion.startsAtTime === (input.startsAtTime ?? null) &&
+    promotion.endsAtTime === (input.endsAtTime ?? null) &&
+    promotion.quota === (input.quota ?? null) &&
+    promotion.perUserLimit === (input.perUserLimit ?? 1) &&
+    promotion.firstBookingOnly === (input.firstBookingOnly ?? false) &&
+    promotion.paymentMethod === (input.paymentMethod ?? null) &&
+    promotion.fundingSource === input.fundingSource &&
+    promotion.budgetAmount === (input.budgetAmount ?? null) &&
+    JSON.stringify(
+      scopes.map((scope) => `${scope.type}:${scope.referenceId ?? ""}`).sort(),
+    ) === JSON.stringify(canonicalPromotionScopes(input.scopes))
+  );
+}
+
+function canonicalPromotionScopes(scopes: PromotionInput["scopes"]): string[] {
+  return (scopes ?? [])
+    .map((scope) => `${scope.type}:${parsePublicId(scope.referenceId)}`)
+    .sort();
+}
+
+function assertCommandReplay(
+  responseBody: unknown,
+  expectedFingerprint: string,
+  legacyMatches: boolean,
+): void {
+  const recordedFingerprint =
+    responseBody &&
+    typeof responseBody === "object" &&
+    "fingerprint" in responseBody &&
+    typeof responseBody.fingerprint === "string"
+      ? responseBody.fingerprint
+      : null;
+  if (
+    (recordedFingerprint !== null && recordedFingerprint === expectedFingerprint) ||
+    (recordedFingerprint === null && legacyMatches)
+  ) {
+    return;
+  }
+  throw new ApiError(
+    409,
+    "IDEMPOTENCY_KEY_REUSED",
+    "Idempotency-Key telah digunakan untuk request yang berbeda.",
+  );
+}
+
+function isDuplicateEntry(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const cause = "cause" in error ? error.cause : undefined;
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    String(cause.code) === "ER_DUP_ENTRY"
+  );
 }

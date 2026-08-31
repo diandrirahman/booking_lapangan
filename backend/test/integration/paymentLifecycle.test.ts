@@ -6,6 +6,7 @@ import { formatPublicId } from "../../src/database/ids.js";
 import {
   bookingPaymentSummaries,
   bookings,
+  ownerEarnings,
   refunds,
 } from "../../src/database/schema/index.js";
 import { PaymentService } from "../../src/payment/application/PaymentService.js";
@@ -177,18 +178,41 @@ describe("payment lifecycle integration", () => {
     );
     await settleAttempt(attempt.id, attempt.amount, "late-payment");
 
-    expect(await getBookingState(booking.id)).toMatchObject({ status: "EXPIRED" });
+    expect(await getBookingState(booking.id)).toMatchObject({
+      status: "EXPIRED",
+      totalPaid: attempt.amount,
+      paymentStatus: "PARTIALLY_PAID",
+    });
     const [refund] = await testDatabase.db
-      .select({ amount: refunds.amount, kind: refunds.kind, status: refunds.status })
+      .select({
+        id: refunds.id,
+        amount: refunds.amount,
+        kind: refunds.kind,
+        status: refunds.status,
+      })
       .from(refunds)
       .innerJoin(bookings, eq(bookings.id, refunds.bookingId))
       .where(eq(bookings.bookingCode, booking.id))
       .limit(1);
-    expect(refund).toEqual({
+    expect(refund).toMatchObject({
       amount: attempt.amount,
       kind: "AUTOMATIC_LATE_PAYMENT",
       status: "PENDING",
     });
+    if (!refund) throw new Error("Refund late payment tidak tersimpan.");
+    await new RefundService(testDatabase).completeSandboxRefund(refund.id, TEST_NOW);
+    expect(await getBookingState(booking.id)).toMatchObject({
+      status: "EXPIRED",
+      totalRefunded: attempt.amount,
+      paymentStatus: "REFUNDED",
+    });
+    const [ownerEarning] = await testDatabase.db
+      .select({ id: ownerEarnings.id })
+      .from(ownerEarnings)
+      .innerJoin(bookings, eq(bookings.id, ownerEarnings.bookingId))
+      .where(eq(bookings.bookingCode, booking.id))
+      .limit(1);
+    expect(ownerEarning).toBeUndefined();
     await removeBookingByReference(booking.id);
   });
 });
@@ -249,6 +273,7 @@ async function getBookingState(reference: string): Promise<{
   status: string;
   balanceDue: number;
   paymentStatus: string;
+  totalPaid: number;
   totalRefunded: number;
 }> {
   const [result] = await testDatabase.db
@@ -256,6 +281,7 @@ async function getBookingState(reference: string): Promise<{
       status: bookings.status,
       balanceDue: bookings.balanceDue,
       paymentStatus: bookingPaymentSummaries.status,
+      totalPaid: bookingPaymentSummaries.totalPaid,
       totalRefunded: bookingPaymentSummaries.totalRefunded,
     })
     .from(bookings)

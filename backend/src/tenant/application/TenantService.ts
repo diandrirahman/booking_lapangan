@@ -143,7 +143,11 @@ export class TenantService {
     )!;
   }
 
-  async listMembers(tenantId: string): Promise<WorkspaceMember[]> {
+  async listMembers(
+    tenantId: string,
+    allowedVenueIds?: string[],
+  ): Promise<WorkspaceMember[]> {
+    if (allowedVenueIds?.length === 0) return [];
     const tenantDatabaseId = parsePublicId(tenantId);
     const memberships = await this.database.db
       .select({
@@ -169,7 +173,20 @@ export class TenantService {
             .select()
             .from(memberVenueAssignments)
             .where(inArray(memberVenueAssignments.membershipId, membershipIds));
-    const tenantRoleIds = memberships.flatMap((membership) =>
+    const allowedVenueDatabaseIds = allowedVenueIds?.map(parsePublicId);
+    const visibleAssignments = allowedVenueDatabaseIds
+      ? assignments.filter((assignment) =>
+          allowedVenueDatabaseIds.includes(assignment.venueId),
+        )
+      : assignments;
+    const visibleMemberships = allowedVenueDatabaseIds
+      ? memberships.filter((membership) =>
+          visibleAssignments.some(
+            (assignment) => assignment.membershipId === membership.membershipId,
+          ),
+        )
+      : memberships;
+    const tenantRoleIds = visibleMemberships.flatMap((membership) =>
       membership.tenantRoleId === null ? [] : [membership.tenantRoleId],
     );
     const assignedPermissions =
@@ -180,14 +197,14 @@ export class TenantService {
             .from(rolePermissions)
             .where(inArray(rolePermissions.roleId, tenantRoleIds));
 
-    return memberships.filter(hasBusinessRole).map((membership) => ({
+    return visibleMemberships.filter(hasBusinessRole).map((membership) => ({
       membershipId: formatPublicId(membership.membershipId),
       userId: formatPublicId(membership.userId),
       name: membership.name,
       email: membership.email,
       role: membership.role,
       status: membership.status,
-      assignedVenueIds: assignments
+      assignedVenueIds: visibleAssignments
         .filter((assignment) => assignment.membershipId === membership.membershipId)
         .map((assignment) => formatPublicId(assignment.venueId)),
       tenantRoleId:

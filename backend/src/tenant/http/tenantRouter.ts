@@ -161,8 +161,17 @@ export function createTenantRouter(
     requireSession,
     asyncHandler(async (request, response) => {
       const tenantId = publicIdSchema.parse(request.params.tenantId);
-      await authorization.requireTenantAccess(request.auth!.userId, tenantId);
-      response.json({ items: await service.listMembers(tenantId) });
+      const access = await authorization.requirePermission(
+        request.auth!.userId,
+        tenantId,
+        "team.manage",
+      );
+      response.json({
+        items: await service.listMembers(
+          tenantId,
+          access.role === "STAFF" ? access.assignedVenueIds : undefined,
+        ),
+      });
     }),
   );
 

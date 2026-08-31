@@ -32,17 +32,28 @@ Project Owner memeriksa laporan dan evidence.
 - Tanggal: 30 Agustus 2026
 - Catatan: `Diterima`; implementer melanjutkan commit, push, dan staging sesuai plan.
 
-## Gate staging
+## Gate staging baseline
 
-Status teknis: **complete — menunggu keputusan Project Owner**.
+Status teknis baseline commit `b74ab139...`: **complete**.
 
 - [x] Deployment web/API sehat dan memakai source commit yang sama.
 - [x] Matriks visual staging 24/24 tersedia.
 - [x] Empat role dan Staff authorization smoke lulus.
 - [x] Seluruh functional smoke staging lulus tanpa finding Medium terbuka.
 - [x] Staging technical gate complete.
-- [ ] Project Owner memberikan keputusan final staging.
 
 `B2-NOT-STG-001` dan empat finding P1/P2 terkait telah Closed setelah full local gate,
 redeploy dari commit yang sama, dan targeted staging retest 31 Agustus 2026.
 Implementer tidak mencentang keputusan final Project Owner.
+
+## Gate staging source terbaru
+
+Status teknis: **menunggu redeploy dan targeted retest finance/idempotency**.
+
+- [ ] API dan web dideploy dari commit remediation yang sama.
+- [ ] Migration `0008`, live/readiness, Redis, outbox, dan reconciliation sehat.
+- [ ] Targeted staging retest finance/idempotency lulus tanpa P1/P2 baru.
+- [ ] Evidence dan runtime log terbaru tersimpan.
+- [ ] Project Owner memberikan keputusan final staging.
+
+Checklist baseline di atas tidak digunakan sebagai pengganti validasi source terbaru.

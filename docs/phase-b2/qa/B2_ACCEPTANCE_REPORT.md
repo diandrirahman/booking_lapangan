@@ -2,7 +2,7 @@
 
 Status: **LOCAL READINESS ACCEPTED — STAGING DIIZINKAN**
 
-Status staging: **TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
+Status staging source terbaru: **REDEPLOY DAN TARGETED RETEST DIPERLUKAN**
 
 ## Readiness yang sudah terbukti
 
@@ -19,6 +19,8 @@ Status staging: **TECHNICAL GATE COMPLETE — MENUNGGU KEPUTUSAN PROJECT OWNER**
   dimensi viewport, light/dark, authorization Staff, console, dan API runtime lulus.
 - Database development telah menerima migration B2 `0004`–`0007` secara forward-only;
   API dan OutboxPublisher berjalan tanpa `DrizzleQueryError`.
+- Migration `0008` dan seluruh remediasi finance/idempotency terbaru telah lulus full
+  `qa:b2:local`; re-review tidak menyisakan P1/P2 aktif.
 
 ## Gate keputusan
 
@@ -44,6 +46,8 @@ Staging teknis boleh dilanjutkan menggunakan commit yang lulus gate ini.
 - Targeted staging retest menunjukkan forged platform promo `422`, cross-scope Staff
   `403`, preference tetap `false` setelah reload, console bersih, dan nol API `5xx`.
 
-Seluruh technical acceptance staging telah terpenuhi. Keputusan final staging tetap
-harus diberikan Project Owner; implementer tidak mencentangnya. Keputusan local
-readiness sebelumnya tidak berubah.
+Hasil di atas adalah baseline staging untuk source `b74ab139...`. Source terbaru yang
+memuat remediasi finance/idempotency harus dideploy ulang dari satu commit yang sama ke
+API dan web, kemudian menjalani targeted staging retest. Keputusan local readiness
+sebelumnya tidak berubah; keputusan final staging tetap harus diberikan Project Owner
+setelah evidence delta terbaru tersedia.

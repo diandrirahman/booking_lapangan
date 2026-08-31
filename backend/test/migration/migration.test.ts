@@ -6,6 +6,12 @@ const migrationDirectory = fileURLToPath(new URL("../../drizzle-v2/", import.met
 const legacyMigrationDirectory = fileURLToPath(
   new URL("../../drizzle/", import.meta.url),
 );
+const migrationRunner = fileURLToPath(
+  new URL("../../src/database/migrate.ts", import.meta.url),
+);
+const maintenanceRunner = fileURLToPath(
+  new URL("../../src/platform/jobs/MaintenanceJobs.ts", import.meta.url),
+);
 
 describe("B1 migration verification", () => {
   it("menyimpan migration versioned dan active reservation primary key", async () => {
@@ -85,5 +91,26 @@ describe("B1 migration verification", () => {
     expect(migrations).toContain("payment_attempt_code_unique");
     expect(migrations).toContain("CREATE TABLE `user_notifications`");
     expect(migrations).toContain("user_notifications_feed_idx");
+  });
+
+  it("mengizinkan earning payout dibatch ulang dan merekonsiliasi legacy saat deploy", async () => {
+    const migrationFiles = (await readdir(migrationDirectory))
+      .filter((fileName) => fileName.endsWith(".sql"))
+      .sort();
+    const latestMigration = await readFile(
+      `${migrationDirectory}${migrationFiles.at(-1)}`,
+      "utf8",
+    );
+    const runner = await readFile(migrationRunner, "utf8");
+    const maintenance = await readFile(maintenanceRunner, "utf8");
+
+    expect(latestMigration).toContain("`payout_batches`.`status` = 'FAILED'");
+    expect(latestMigration).toContain("'RESERVED_FOR_PAYOUT'");
+    expect(latestMigration).toContain("DROP INDEX `payout_item_earning_unique`");
+    expect(latestMigration).toContain("payout_item_batch_earning_unique");
+    expect(runner).toContain("reconcileLegacyRefundLedgers");
+    expect(maintenance).toContain("ROLLING_DEPLOY_RECONCILIATION_WINDOW_MS");
+    expect(maintenance).toContain("reconcileLegacyRefundLedgers(");
+    expect(maintenance).toContain("rollingDeploymentCutoff");
   });
 });

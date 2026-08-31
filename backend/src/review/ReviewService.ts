@@ -1,4 +1,4 @@
-import { and, avg, desc, eq, sql } from "drizzle-orm";
+import { and, avg, desc, eq, inArray, sql } from "drizzle-orm";
 import type { DatabaseConnection } from "../database/client.js";
 import { formatPublicId, parsePublicId } from "../database/ids.js";
 import {
@@ -118,6 +118,7 @@ export class ReviewService {
   }
 
   async listBusiness(tenantId: string, venueIds?: string[]) {
+    if (venueIds?.length === 0) return [];
     const venueDatabaseIds = venueIds?.map(parsePublicId);
     const rows = await this.database.db
       .select({ review: reviews, booking: bookings, reply: reviewReplies })
@@ -127,12 +128,7 @@ export class ReviewService {
       .where(
         and(
           eq(bookings.tenantId, parsePublicId(tenantId)),
-          venueDatabaseIds
-            ? sql`${reviews.venueId} in (${sql.join(
-                venueDatabaseIds.map((id) => sql`${id}`),
-                sql`, `,
-              )})`
-            : undefined,
+          venueDatabaseIds ? inArray(reviews.venueId, venueDatabaseIds) : undefined,
         ),
       )
       .orderBy(desc(reviews.createdAt));

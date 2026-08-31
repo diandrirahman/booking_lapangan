@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import type { RowDataPacket } from "mysql2";
 import { loadEnvironment } from "../config/environment.js";
+import { FinanceService } from "../finance/FinanceService.js";
 import { createDatabaseConnection } from "./client.js";
 
 const environment = loadEnvironment();
@@ -27,6 +28,8 @@ try {
     );
   }
   await migrate(database.db, { migrationsFolder });
+  const financeService = new FinanceService(database);
+  await financeService.reconcileLegacyRefundLedgers();
   console.info("Migration schema numerik selesai.");
 } finally {
   await database.close();

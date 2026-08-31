@@ -284,6 +284,35 @@ export class PaymentService {
         const latePayment =
           booking.status === "EXPIRED" || booking.status === "CANCELLED";
         if (latePayment) {
+          const [summary] = await transaction
+            .select()
+            .from(bookingPaymentSummaries)
+            .where(eq(bookingPaymentSummaries.bookingId, booking.id))
+            .limit(1)
+            .for("update");
+          if (!summary)
+            throw new ApiError(
+              409,
+              "PAYMENT_SUMMARY_MISSING",
+              "Ringkasan pembayaran tidak ditemukan.",
+            );
+          const totalPaid = summary.totalPaid + attempt.amount;
+          await transaction
+            .update(bookingPaymentSummaries)
+            .set({
+              totalPaid,
+              balanceDue: Math.max(0, booking.totalAmount - totalPaid),
+              status: totalPaid >= booking.totalAmount ? "PAID" : "PARTIALLY_PAID",
+              updatedAt: now,
+            })
+            .where(eq(bookingPaymentSummaries.bookingId, booking.id));
+          await this.financeService.recordPayment(
+            transaction,
+            booking.id,
+            attempt.id,
+            attempt.amount,
+            now,
+          );
           await this.refundService.requestRefund(transaction, {
             bookingId: booking.id,
             paymentAttemptId: attempt.id,

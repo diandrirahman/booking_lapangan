@@ -57,6 +57,13 @@
       "when": 1788076134237,
       "tag": "0007_massive_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1788143693938,
+      "tag": "0008_wild_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

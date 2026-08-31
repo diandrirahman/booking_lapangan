@@ -100,3 +100,10 @@ targeted staging retest. Preference email reminder tetap `false` setelah GET, di
 dibuka ulang, dan reload; Staff promotion boundary menghasilkan `403`; forged platform
 promo menghasilkan `422`. Staging technical gate complete dan menunggu keputusan
 Project Owner.
+
+Setelah baseline tersebut, remediation finance/idempotency menambah migration `0008`
+dan regression untuk ledger refund, earning/payout, reschedule, tenant/venue boundary,
+serta mutation replay. Seluruh 43 status `complete-local` tetap berlaku dan full local
+gate lulus tanpa P1/P2 aktif. Bukti staging baseline belum mewakili delta ini; source
+terbaru harus dideploy dan menjalani targeted staging retest sebelum keputusan final
+Project Owner.

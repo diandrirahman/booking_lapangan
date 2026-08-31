@@ -246,5 +246,10 @@ export const payoutItems = mysqlTable(
     // consumed exactly once together with the positive earnings they offset.
     amount: bigint("amount", { mode: "number" }).notNull(),
   },
-  (table) => [uniqueIndex("payout_item_earning_unique").on(table.earningId)],
+  (table) => [
+    uniqueIndex("payout_item_batch_earning_unique").on(
+      table.earningId,
+      table.payoutBatchId,
+    ),
+  ],
 );

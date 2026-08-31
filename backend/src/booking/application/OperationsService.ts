@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, lt, lte, notInArray } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lt, lte, notInArray, or } from "drizzle-orm";
 import type { DatabaseConnection } from "../../database/client.js";
 import { formatPublicId, parsePublicId } from "../../database/ids.js";
 import {
@@ -69,20 +69,9 @@ export class OperationsService {
     idempotencyKey: string,
     now = new Date(),
   ): Promise<void> {
-    const [existing] = await this.database.db
-      .select({ id: commandIdempotency.id })
-      .from(commandIdempotency)
-      .where(
-        and(
-          eq(commandIdempotency.scope, "booking.reschedule"),
-          eq(commandIdempotency.actorUserId, parsePublicId(actorUserId)),
-          eq(commandIdempotency.idempotencyKey, idempotencyKey),
-        ),
-      )
-      .limit(1);
-    if (existing) return;
     const [booking] = await this.database.db
       .select({
+        id: bookings.id,
         customerUserId: bookings.customerUserId,
         startsAt: bookingItems.startsAt,
       })
@@ -92,6 +81,42 @@ export class OperationsService {
       .limit(1);
     if (!booking || booking.customerUserId !== parsePublicId(actorUserId)) {
       throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking tidak ditemukan.");
+    }
+    const requestedSlotIds = canonicalSlotIds(newSlotIds.map(parsePublicId));
+    const [existing] = await this.database.db
+      .select({ responseBody: commandIdempotency.responseBody })
+      .from(commandIdempotency)
+      .where(
+        rescheduleReplayWhere(booking.id, parsePublicId(actorUserId), idempotencyKey),
+      )
+      .limit(1);
+    if (existing) {
+      const [legacyReschedule] = await this.database.db
+        .select({
+          newSlotIds: bookingReschedules.newSlotIds,
+          reason: bookingReschedules.reason,
+        })
+        .from(bookingReschedules)
+        .where(eq(bookingReschedules.bookingId, booking.id))
+        .limit(1);
+      const recordedSlotIds =
+        rescheduleSlotsFromResponse(existing.responseBody) ??
+        rescheduleSlotsFromResponse({ newSlotIds: legacyReschedule?.newSlotIds });
+      const recordedReason =
+        rescheduleReasonFromResponse(existing.responseBody) ??
+        legacyReschedule?.reason ??
+        null;
+      if (
+        !sameSlotIds(recordedSlotIds, requestedSlotIds) ||
+        recordedReason !== "Reschedule oleh customer"
+      ) {
+        throw new ApiError(
+          409,
+          "IDEMPOTENCY_KEY_REUSED",
+          "Idempotency-Key telah digunakan untuk target reschedule yang berbeda.",
+        );
+      }
+      return;
     }
     if (booking.startsAt.getTime() - now.getTime() < 24 * 60 * 60_000) {
       throw new ApiError(
@@ -558,22 +583,68 @@ export class OperationsService {
     idempotencyKey?: string,
   ): Promise<void> {
     const newSlotDatabaseIds = newSlotIds.map(parsePublicId);
+    const requestedSlotIds = canonicalSlotIds(newSlotDatabaseIds);
     const actorDatabaseId = parsePublicId(actorUserId);
-    await this.database.db.transaction(async (transaction) => {
+    const changed = await this.database.db.transaction(async (transaction) => {
       const [booking] = await transaction
         .select()
         .from(bookings)
         .where(eq(bookings.bookingCode, bookingId))
         .limit(1)
         .for("update");
-      if (!booking || booking.status !== "CONFIRMED") {
+      if (!booking) {
+        throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking tidak ditemukan.");
+      }
+      const bookingDatabaseId = booking.id;
+      if (idempotencyKey) {
+        const [existing] = await transaction
+          .select({
+            id: commandIdempotency.id,
+            responseBody: commandIdempotency.responseBody,
+          })
+          .from(commandIdempotency)
+          .where(
+            rescheduleReplayWhere(bookingDatabaseId, actorDatabaseId, idempotencyKey),
+          )
+          .limit(1);
+        if (existing) {
+          const [legacyReschedule] = await transaction
+            .select({
+              newSlotIds: bookingReschedules.newSlotIds,
+              reason: bookingReschedules.reason,
+            })
+            .from(bookingReschedules)
+            .where(eq(bookingReschedules.bookingId, bookingDatabaseId))
+            .limit(1);
+          const recordedSlotIds =
+            rescheduleSlotsFromResponse(existing.responseBody) ??
+            rescheduleSlotsFromResponse({
+              newSlotIds: legacyReschedule?.newSlotIds,
+            });
+          const recordedReason =
+            rescheduleReasonFromResponse(existing.responseBody) ??
+            legacyReschedule?.reason ??
+            null;
+          if (
+            !sameSlotIds(recordedSlotIds, requestedSlotIds) ||
+            recordedReason !== reason
+          ) {
+            throw new ApiError(
+              409,
+              "IDEMPOTENCY_KEY_REUSED",
+              "Idempotency-Key telah digunakan untuk target reschedule yang berbeda.",
+            );
+          }
+          return false;
+        }
+      }
+      if (booking.status !== "CONFIRMED") {
         throw new ApiError(
           409,
           "BOOKING_NOT_RESCHEDULABLE",
           "Hanya booking confirmed yang dapat dijadwalkan ulang.",
         );
       }
-      const bookingDatabaseId = booking.id;
       const [priorReschedule] = await transaction
         .select({ id: bookingReschedules.id })
         .from(bookingReschedules)
@@ -799,6 +870,13 @@ export class OperationsService {
               : 0),
           taxPlaceholder: previousSnapshot.taxPlaceholder,
         });
+        if (priceDifference < 0) {
+          await this.financeService.syncOwnerEarningToLatestSnapshot(
+            transaction,
+            bookingDatabaseId,
+            now,
+          );
+        }
       }
       if (adjustmentPending) {
         const paymentReference = createPublicReference(PAYMENT_REFERENCE_PREFIX);
@@ -879,15 +957,17 @@ export class OperationsService {
       }
       if (idempotencyKey) {
         await transaction.insert(commandIdempotency).values({
-          scope: "booking.reschedule",
+          scope: rescheduleCommandScope(bookingDatabaseId),
           idempotencyKey,
           actorUserId: actorDatabaseId,
           resourceId: bookingDatabaseId,
           responseStatus: 204,
+          responseBody: { newSlotIds: requestedSlotIds, reason },
         });
       }
+      return true;
     });
-    await this.publishCommittedEvents();
+    if (changed) await this.publishCommittedEvents();
   }
 
   async recordAttendance(
@@ -1090,6 +1170,53 @@ export class OperationsService {
       // Domain changes are committed; the maintenance job retries the outbox signal.
     }
   }
+}
+
+function rescheduleCommandScope(bookingId: number): string {
+  return `booking.reschedule:${bookingId}`;
+}
+
+function rescheduleReplayWhere(
+  bookingId: number,
+  actorUserId: number,
+  idempotencyKey: string,
+) {
+  return and(
+    eq(commandIdempotency.actorUserId, actorUserId),
+    eq(commandIdempotency.idempotencyKey, idempotencyKey),
+    or(
+      eq(commandIdempotency.scope, rescheduleCommandScope(bookingId)),
+      and(
+        eq(commandIdempotency.scope, "booking.reschedule"),
+        eq(commandIdempotency.resourceId, bookingId),
+      ),
+    ),
+  );
+}
+
+function canonicalSlotIds(slotIds: number[]): number[] {
+  return [...slotIds].sort((left, right) => left - right);
+}
+
+function rescheduleSlotsFromResponse(value: unknown): number[] | null {
+  if (!value || typeof value !== "object" || !("newSlotIds" in value)) return null;
+  const slotIds = value.newSlotIds;
+  return Array.isArray(slotIds) && slotIds.every((slotId) => Number.isInteger(slotId))
+    ? canonicalSlotIds(slotIds as number[])
+    : null;
+}
+
+function rescheduleReasonFromResponse(value: unknown): string | null {
+  if (!value || typeof value !== "object" || !("reason" in value)) return null;
+  return typeof value.reason === "string" ? value.reason : null;
+}
+
+function sameSlotIds(left: number[] | null, right: number[]): boolean {
+  return (
+    left !== null &&
+    left.length === right.length &&
+    left.every((slotId, index) => slotId === right[index])
+  );
 }
 
 export interface BusinessBookingView {
