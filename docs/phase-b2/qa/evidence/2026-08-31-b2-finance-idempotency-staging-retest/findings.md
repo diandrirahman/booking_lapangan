@@ -11,5 +11,5 @@
 `B2-RT-STG-002` (P2) ditemukan ketika runtime log menunjukkan Vercel mematikan stream SSE
 pada 300 detik. Fix planned close 240 detik lulus regression, full local gate, redeploy,
 dan staging long-run 250 detik. Deployment final tidak mencatat error/500; finding
-Closed. Tidak ada P1/P2 aktif. Keputusan final staging tetap milik Project Owner dan
-belum dicentang oleh implementer.
+Closed. Tidak ada P1/P2 aktif. Project Owner memberikan keputusan final staging
+`Diterima` pada 31 Agustus 2026; implementer hanya mencatat keputusan tersebut.

@@ -98,8 +98,8 @@ Status `complete-local` 43/43 tidak berubah. Deployment dan visual matrix stagin
 review P1/P2 telah diremediasi dengan regression test, full local gate, redeploy, dan
 targeted staging retest. Preference email reminder tetap `false` setelah GET, dialog
 dibuka ulang, dan reload; Staff promotion boundary menghasilkan `403`; forged platform
-promo menghasilkan `422`. Staging technical gate complete dan menunggu keputusan
-Project Owner.
+promo menghasilkan `422`. Baseline staging tersebut lulus dan dilanjutkan dengan
+targeted retest source terbaru.
 
 Setelah baseline tersebut, remediation finance/idempotency menambah migration `0008`
 dan regression untuk ledger refund, earning/payout, reschedule, tenant/venue boundary,
@@ -114,5 +114,6 @@ Owner `200`; create idempotency mereplay resource sama dan menolak payload berbe
 dengan `409`; HTTP `500` bersih. Follow-up runtime log menemukan P2 `B2-RT-STG-002`:
 SSE diputus Vercel pada 300 detik. Planned close 240 detik lulus full local gate dan
 staging long-run 250 detik; deployment final `d4e8bef...` di `sin1` tidak mempunyai error
-atau HTTP `500`. `B2-RT-STG-002` Closed, tidak ada P1/P2 aktif, dan status technical
-staging complete menunggu keputusan final Project Owner.
+atau HTTP `500`. `B2-RT-STG-002` Closed dan tidak ada P1/P2 aktif. Project Owner
+memberikan keputusan final staging `Diterima` pada 31 Agustus 2026; Phase B2 diterima
+untuk lokal dan staging.

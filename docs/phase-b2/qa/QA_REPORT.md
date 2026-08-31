@@ -5,7 +5,7 @@
 - Environment: MySQL 8 E2E `3308`, Redis `6380/1`, API `3102`, web `4175`
 - Scope: lokal terisolasi, regression B1 + fitur B2
 - Status lokal: **local readiness accepted; 43/43 complete-local**
-- Status staging source terbaru: **technical gate complete — menunggu keputusan Project Owner**
+- Status staging source terbaru: **accepted — final Project Owner sign-off**
 
 ## Hasil otomatis
 
@@ -176,7 +176,8 @@ error. Deployment final tidak mempunyai error log atau HTTP `500`, dan Staff/Adm
 sesudah redeploy lulus 2/2. Finding ditutup. Visual matrix tidak diulang karena delta
 hanya backend/database.
 
-Tidak ada P1/P2 aktif dan tidak ada finding Blocker/Critical/High/Medium baru. Status
-teknis staging source terbaru complete dan menunggu keputusan final Project Owner.
+Tidak ada P1/P2 aktif dan tidak ada finding Blocker/Critical/High/Medium baru. Project
+Owner memberikan keputusan final `Diterima` pada 31 Agustus 2026; Phase B2 staging
+berstatus accepted. Implementer hanya mencatat keputusan tersebut.
 
 Evidence: `evidence/2026-08-31-b2-finance-idempotency-staging-retest/`.

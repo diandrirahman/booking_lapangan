@@ -2,7 +2,7 @@
 
 Status: **LOCAL READINESS ACCEPTED — STAGING DIIZINKAN**
 
-Status staging source terbaru: **TECHNICAL GATE COMPLETE — MENUNGGU PROJECT OWNER**
+Status staging source terbaru: **ACCEPTED — FINAL PROJECT OWNER SIGN-OFF**
 
 ## Readiness yang sudah terbukti
 
@@ -52,6 +52,6 @@ yang sama setelah migration `0008` forward-only. Targeted retest finance/idempot
 lulus: health 200, Staff/Admin Playwright 2/2, finance read 200, replay identik resource
 sama, dan changed-payload replay 409. Follow-up log menemukan timeout SSE pada batas
 Vercel 300 detik; planned close 240 detik kemudian lulus full local gate dan staging test
-250 detik. Current deployment tidak mencatat error atau HTTP `500`. Technical gate
-staging complete. Keputusan local readiness sebelumnya tidak berubah dan keputusan final
-staging tetap milik Project Owner.
+250 detik. Current deployment tidak mencatat error atau HTTP `500`. Project Owner
+memberikan keputusan final staging `Diterima` pada 31 Agustus 2026. Phase B2 diterima
+untuk lokal dan staging; scope production tetap tidak termasuk dalam acceptance ini.

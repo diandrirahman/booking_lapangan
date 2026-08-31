@@ -1,6 +1,8 @@
-# Project Owner Sign-off — Phase B2 Lokal
+# Project Owner Sign-off — Phase B2
 
 Status: **ACCEPTED — LOCAL READINESS**
+
+Status staging: **ACCEPTED — FINAL PROJECT OWNER SIGN-OFF**
 
 Implementer hanya mencatat hasil teknis. Keputusan berikut hanya boleh dicentang setelah
 Project Owner memeriksa laporan dan evidence.
@@ -44,18 +46,24 @@ Status teknis baseline commit `b74ab139...`: **complete**.
 
 `B2-NOT-STG-001` dan empat finding P1/P2 terkait telah Closed setelah full local gate,
 redeploy dari commit yang sama, dan targeted staging retest 31 Agustus 2026.
-Implementer tidak mencentang keputusan final Project Owner.
+Keputusan final pada bagian berikut dicatat hanya setelah Project Owner menyatakannya.
 
 ## Gate staging source terbaru
 
-Status teknis: **complete — menunggu keputusan Project Owner**.
+Status teknis: **complete — accepted oleh Project Owner**.
 
 - [x] API dan web dideploy dari commit remediation SSE yang sama.
 - [x] Migration `0008`, live/readiness, Redis, outbox, dan reconciliation sehat.
 - [x] Targeted staging retest finance/idempotency/SSE lulus tanpa P1/P2 baru.
 - [x] Evidence dan runtime log terbaru tersimpan.
-- [ ] Project Owner memberikan keputusan final staging.
+- [x] Project Owner memberikan keputusan final staging.
 
 Source final `d4e8bef...`, API `dpl_7aMdfQLfV2DXfrakEuRxJoZSvHgD`, dan web
 `dpl_DkqVPw5PhKhE7tfgupKmcZhC8S5j` menjadi gate current. `B2-RT-STG-002` telah Closed
-setelah long-run retest. Implementer tidak mencentang keputusan final Project Owner.
+setelah long-run retest.
+
+- Nama Project Owner: dicatat melalui keputusan Project Owner pada task ini
+- Tanggal: 31 Agustus 2026
+- Keputusan final staging: `Diterima`
+- Catatan: implementer hanya mencatat keputusan Project Owner; acceptance tidak mencakup
+  production atau provider uang nyata.
