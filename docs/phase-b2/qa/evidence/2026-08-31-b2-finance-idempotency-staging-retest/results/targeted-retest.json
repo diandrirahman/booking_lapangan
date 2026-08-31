@@ -1,0 +1,42 @@
+{
+  "date": "2026-08-31",
+  "sourceCommit": "9ed32bb00424863cf3a8d744aa7ee007e90f70dc",
+  "deployments": {
+    "migration": "dpl_9yp9ifpMjSFLPFjFjtrnrwxjCieh",
+    "api": "dpl_9pDwU27JiRdvULSQ7QDVJnJ1Naqq",
+    "web": "dpl_BsdCU8wX1QfPeTtNiHJyTd9ZBfRT",
+    "apiRegion": "sin1"
+  },
+  "health": {
+    "apiLive": 200,
+    "apiReady": 200,
+    "web": 200,
+    "sameOriginReady": 200
+  },
+  "tests": {
+    "staffAdminPlaywright": {
+      "passed": 2,
+      "failed": 0
+    },
+    "ownerFinance": {
+      "summaryStatus": 200,
+      "ledgerStatus": 200,
+      "payoutsStatus": 200,
+      "pageRenderedWithoutConsoleError": true
+    },
+    "promotionCreateIdempotency": {
+      "createStatus": 201,
+      "identicalReplayStatus": 201,
+      "identicalReplayReturnedSameResource": true,
+      "changedPayloadStatus": 409
+    }
+  },
+  "runtime": {
+    "errorLogs": 14,
+    "http500Logs": 0,
+    "sseProviderTimeouts": 14,
+    "sseRemediationLocalGate": "pass",
+    "sseStagingRetest": "pending"
+  },
+  "status": "finance-pass-sse-retest-pending"
+}

@@ -2,7 +2,7 @@
 
 Status: **LOCAL READINESS ACCEPTED — STAGING DIIZINKAN**
 
-Status staging source terbaru: **REDEPLOY DAN TARGETED RETEST DIPERLUKAN**
+Status staging source terbaru: **REDEPLOY SSE DAN TARGETED RETEST DIPERLUKAN**
 
 ## Readiness yang sudah terbukti
 
@@ -46,8 +46,11 @@ Staging teknis boleh dilanjutkan menggunakan commit yang lulus gate ini.
 - Targeted staging retest menunjukkan forged platform promo `422`, cross-scope Staff
   `403`, preference tetap `false` setelah reload, console bersih, dan nol API `5xx`.
 
-Hasil di atas adalah baseline staging untuk source `b74ab139...`. Source terbaru yang
-memuat remediasi finance/idempotency harus dideploy ulang dari satu commit yang sama ke
-API dan web, kemudian menjalani targeted staging retest. Keputusan local readiness
-sebelumnya tidak berubah; keputusan final staging tetap harus diberikan Project Owner
-setelah evidence delta terbaru tersedia.
+Hasil promotion/notification tetap menjadi baseline staging untuk source `b74ab139...`.
+Source remediation terbaru `9ed32bb...` telah dideploy ke API `sin1` dan web dari commit
+yang sama setelah migration `0008` forward-only. Targeted retest finance/idempotency
+lulus: health 200, Staff/Admin Playwright 2/2, finance read 200, replay identik resource
+sama, dan changed-payload replay 409. Follow-up log menemukan timeout SSE pada batas
+Vercel 300 detik. Fix planned close 240 detik telah lulus full local gate, tetapi staging
+technical gate menunggu redeploy dan runtime retest. Keputusan local readiness sebelumnya
+tidak berubah.

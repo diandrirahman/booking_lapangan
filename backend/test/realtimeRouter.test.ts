@@ -18,6 +18,12 @@ class FailingSubscriber extends EventEmitter {
   subscribe = vi.fn();
 }
 
+class SuccessfulSubscriber extends EventEmitter {
+  readonly disconnect = vi.fn();
+  connect = vi.fn().mockResolvedValue(undefined);
+  subscribe = vi.fn().mockResolvedValue(undefined);
+}
+
 describe("realtimeRouter", () => {
   it("memisahkan audience Customer, tenant, dan platform", () => {
     const customerId = formatPublicId(100);
@@ -82,6 +88,37 @@ describe("realtimeRouter", () => {
       .set("Cookie", `${environment.SESSION_COOKIE_NAME}=token`);
     expect(response.status).toBe(200);
     expect(response.text).toContain("event: degraded");
+    expect(subscriber.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("menutup stream terencana sebelum batas runtime provider", async () => {
+    const environment = loadEnvironment({ NODE_ENV: "test" });
+    const subscriber = new SuccessfulSubscriber();
+    const redis = {
+      duplicate: () => subscriber,
+    } as unknown as Redis;
+    const app = createApp({
+      environment,
+      readinessCheck: () => Promise.resolve(),
+      sessionStore: {
+        create: vi.fn(),
+        revoke: vi.fn(),
+        findByToken: vi.fn().mockResolvedValue({
+          id: "realtime-session",
+          userId: formatPublicId(1),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      },
+      routers: [createRealtimeRouter(redis, {} as TenantAuthorizationService, 10)],
+    });
+
+    const response = await request(app)
+      .get("/api/v1/events")
+      .set("Cookie", `${environment.SESSION_COOKIE_NAME}=token`);
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("event: ready");
+    expect(subscriber.subscribe).toHaveBeenCalledOnce();
     expect(subscriber.disconnect).toHaveBeenCalledOnce();
   });
 });

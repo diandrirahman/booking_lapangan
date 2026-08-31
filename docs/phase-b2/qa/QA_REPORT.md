@@ -5,7 +5,7 @@
 - Environment: MySQL 8 E2E `3308`, Redis `6380/1`, API `3102`, web `4175`
 - Scope: lokal terisolasi, regression B1 + fitur B2
 - Status lokal: **local readiness accepted; 43/43 complete-local**
-- Status staging source terbaru: **menunggu redeploy dan targeted retest**
+- Status staging source terbaru: **menunggu redeploy dan SSE targeted retest**
 
 ## Hasil otomatis
 
@@ -14,7 +14,7 @@
 | Formatter                    | Lulus                                            |
 | ESLint                       | Lulus                                            |
 | TypeScript                   | Lulus                                            |
-| Unit frontend/backend/client | 49 + 56 + 2 lulus                                |
+| Unit frontend/backend/client | 49 + 57 + 2 lulus                                |
 | Integration                  | 65/65 lulus                                      |
 | Security                     | 29/29 lulus                                      |
 | Concurrency                  | 2/2 lulus; promo quota diuji dengan 50 request   |
@@ -151,3 +151,27 @@ Baseline ini tetap valid sebagai bukti integration boundary, tetapi belum membuk
 remediasi finance/idempotency terbaru pada working source. Status staging source terbaru
 baru boleh kembali menjadi technical gate complete setelah commit yang lulus local gate
 dideploy ke API dan web, lalu targeted retest tersimpan sebagai evidence baru.
+
+## Remediasi finance/idempotency — targeted staging retest 31 Agustus 2026
+
+Source commit `9ed32bb00424863cf3a8d744aa7ee007e90f70dc` dideploy ke API
+`dpl_9pDwU27JiRdvULSQ7QDVJnJ1Naqq` (`sin1`) dan web
+`dpl_BsdCU8wX1QfPeTtNiHJyTd9ZBfRT`. Migration `0008` dijalankan forward-only pada
+build production terisolasi sebelum API final diverifikasi.
+
+- API live/ready, web, dan same-origin readiness merespons `200`.
+- Staff forbidden dan Admin read smoke Playwright lulus 2/2.
+- Finance summary, ledger, dan payout list Owner merespons `200`.
+- Create promotion merespons `201`; replay identik mengembalikan resource sama;
+  perubahan payload dengan key sama ditolak `409`.
+- Halaman finance Owner tidak menghasilkan console error pada smoke terakhir.
+- Query HTTP `500` bersih, tetapi follow-up runtime log menemukan 14 timeout SSE
+  `/api/v1/events` pada batas Vercel 300 detik.
+
+Finding `B2-RT-STG-002` berstatus P2/Open-staging. Root cause-nya stream SSE tidak
+memiliki planned lifetime; Vercel mematikannya pada batas 300 detik walaupun status awal 200. Stream sekarang ditutup terencana pada 240 detik agar `EventSource` reconnect
+otomatis. Regression router, lint, typecheck, dan full `qa:b2:local` lulus. Visual matrix
+tidak diulang karena delta hanya backend. Gate staging menunggu redeploy fix dan runtime
+retest lebih dari 240 detik.
+
+Evidence: `evidence/2026-08-31-b2-finance-idempotency-staging-retest/`.

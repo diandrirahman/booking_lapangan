@@ -107,3 +107,11 @@ serta mutation replay. Seluruh 43 status `complete-local` tetap berlaku dan full
 gate lulus tanpa P1/P2 aktif. Bukti staging baseline belum mewakili delta ini; source
 terbaru harus dideploy dan menjalani targeted staging retest sebelum keputusan final
 Project Owner.
+
+Targeted retest tersebut selesai pada source `9ed32bb...`: migration `0008` forward-only,
+API `sin1`, web, dan same-origin health lulus; Staff/Admin Playwright 2/2; finance read
+Owner `200`; create idempotency mereplay resource sama dan menolak payload berbeda
+dengan `409`; HTTP `500` bersih. Follow-up runtime log menemukan P2 `B2-RT-STG-002`:
+SSE diputus Vercel pada 300 detik. Planned close 240 detik dan regression sudah lulus full
+local gate; status staging menunggu redeploy dan runtime retest sebelum keputusan final
+Project Owner.

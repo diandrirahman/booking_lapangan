@@ -6,9 +6,12 @@ import { requireSession } from "../identity/auth/sessionMiddleware.js";
 import type { TenantAuthorizationService } from "../tenant/authorization/TenantAuthorizationService.js";
 import { realtimeChannel, type RealtimeEvent } from "./OutboxPublisher.js";
 
+const DEFAULT_CONNECTION_LIFETIME_MS = 240_000;
+
 export function createRealtimeRouter(
   redis: Redis,
   authorization: TenantAuthorizationService,
+  connectionLifetimeMs = DEFAULT_CONNECTION_LIFETIME_MS,
 ): Router {
   const router = Router();
   router.get(
@@ -35,15 +38,20 @@ export function createRealtimeRouter(
 
       const subscriber = redis.duplicate();
       let closed = false;
-      const heartbeat = setInterval(() => {
-        if (!response.writableEnded) response.write(": heartbeat\n\n");
-      }, 20_000);
       const cleanup = () => {
         if (closed) return;
         closed = true;
         clearInterval(heartbeat);
+        clearTimeout(connectionLifetime);
         subscriber.disconnect();
       };
+      const heartbeat = setInterval(() => {
+        if (!response.writableEnded) response.write(": heartbeat\n\n");
+      }, 20_000);
+      const connectionLifetime = setTimeout(() => {
+        if (!response.writableEnded) response.end();
+        cleanup();
+      }, connectionLifetimeMs);
       subscriber.on("error", () => {
         if (closed) return;
         if (!response.writableEnded) {
