@@ -112,6 +112,7 @@ Targeted retest tersebut selesai pada source `9ed32bb...`: migration `0008` forw
 API `sin1`, web, dan same-origin health lulus; Staff/Admin Playwright 2/2; finance read
 Owner `200`; create idempotency mereplay resource sama dan menolak payload berbeda
 dengan `409`; HTTP `500` bersih. Follow-up runtime log menemukan P2 `B2-RT-STG-002`:
-SSE diputus Vercel pada 300 detik. Planned close 240 detik dan regression sudah lulus full
-local gate; status staging menunggu redeploy dan runtime retest sebelum keputusan final
-Project Owner.
+SSE diputus Vercel pada 300 detik. Planned close 240 detik lulus full local gate dan
+staging long-run 250 detik; deployment final `d4e8bef...` di `sin1` tidak mempunyai error
+atau HTTP `500`. `B2-RT-STG-002` Closed, tidak ada P1/P2 aktif, dan status technical
+staging complete menunggu keputusan final Project Owner.

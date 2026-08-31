@@ -48,14 +48,14 @@ Implementer tidak mencentang keputusan final Project Owner.
 
 ## Gate staging source terbaru
 
-Status teknis: **menunggu redeploy SSE dan targeted runtime retest**.
+Status teknis: **complete — menunggu keputusan Project Owner**.
 
-- [ ] API dan web dideploy dari commit remediation SSE yang sama.
+- [x] API dan web dideploy dari commit remediation SSE yang sama.
 - [x] Migration `0008`, live/readiness, Redis, outbox, dan reconciliation sehat.
-- [ ] Targeted staging retest finance/idempotency/SSE lulus tanpa P1/P2 baru.
-- [ ] Evidence dan runtime log terbaru tersimpan.
+- [x] Targeted staging retest finance/idempotency/SSE lulus tanpa P1/P2 baru.
+- [x] Evidence dan runtime log terbaru tersimpan.
 - [ ] Project Owner memberikan keputusan final staging.
 
-Source `9ed32bb...` membuktikan finance/idempotency, tetapi runtime log menemukan
-`B2-RT-STG-002`. Implementer tidak mencentang technical complete atau keputusan final
-Project Owner sebelum fix SSE dideploy dan diverifikasi.
+Source final `d4e8bef...`, API `dpl_7aMdfQLfV2DXfrakEuRxJoZSvHgD`, dan web
+`dpl_DkqVPw5PhKhE7tfgupKmcZhC8S5j` menjadi gate current. `B2-RT-STG-002` telah Closed
+setelah long-run retest. Implementer tidak mencentang keputusan final Project Owner.

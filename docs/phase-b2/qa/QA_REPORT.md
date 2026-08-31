@@ -5,7 +5,7 @@
 - Environment: MySQL 8 E2E `3308`, Redis `6380/1`, API `3102`, web `4175`
 - Scope: lokal terisolasi, regression B1 + fitur B2
 - Status lokal: **local readiness accepted; 43/43 complete-local**
-- Status staging source terbaru: **menunggu redeploy dan SSE targeted retest**
+- Status staging source terbaru: **technical gate complete — menunggu keputusan Project Owner**
 
 ## Hasil otomatis
 
@@ -154,10 +154,10 @@ dideploy ke API dan web, lalu targeted retest tersimpan sebagai evidence baru.
 
 ## Remediasi finance/idempotency — targeted staging retest 31 Agustus 2026
 
-Source commit `9ed32bb00424863cf3a8d744aa7ee007e90f70dc` dideploy ke API
-`dpl_9pDwU27JiRdvULSQ7QDVJnJ1Naqq` (`sin1`) dan web
-`dpl_BsdCU8wX1QfPeTtNiHJyTd9ZBfRT`. Migration `0008` dijalankan forward-only pada
-build production terisolasi sebelum API final diverifikasi.
+Source remediation finance `9ed32bb...` menjalankan migration `0008` forward-only.
+Setelah follow-up SSE, source final `d4e8bef35172d69b1b50dd34d64b6282e10e74e8`
+dideploy ke API `dpl_7aMdfQLfV2DXfrakEuRxJoZSvHgD` (`sin1`) dan web
+`dpl_DkqVPw5PhKhE7tfgupKmcZhC8S5j`.
 
 - API live/ready, web, dan same-origin readiness merespons `200`.
 - Staff forbidden dan Admin read smoke Playwright lulus 2/2.
@@ -168,10 +168,15 @@ build production terisolasi sebelum API final diverifikasi.
 - Query HTTP `500` bersih, tetapi follow-up runtime log menemukan 14 timeout SSE
   `/api/v1/events` pada batas Vercel 300 detik.
 
-Finding `B2-RT-STG-002` berstatus P2/Open-staging. Root cause-nya stream SSE tidak
-memiliki planned lifetime; Vercel mematikannya pada batas 300 detik walaupun status awal 200. Stream sekarang ditutup terencana pada 240 detik agar `EventSource` reconnect
-otomatis. Regression router, lint, typecheck, dan full `qa:b2:local` lulus. Visual matrix
-tidak diulang karena delta hanya backend. Gate staging menunggu redeploy fix dan runtime
-retest lebih dari 240 detik.
+Follow-up runtime log sempat membuka P2 `B2-RT-STG-002`: stream SSE tidak memiliki
+planned lifetime dan diputus Vercel pada 300 detik. Stream sekarang ditutup terencana
+pada 240 detik agar `EventSource` reconnect otomatis. Regression dan full
+`qa:b2:local` lulus; staging connection test 250 detik juga lulus tanpa page/session
+error. Deployment final tidak mempunyai error log atau HTTP `500`, dan Staff/Admin smoke
+sesudah redeploy lulus 2/2. Finding ditutup. Visual matrix tidak diulang karena delta
+hanya backend/database.
+
+Tidak ada P1/P2 aktif dan tidak ada finding Blocker/Critical/High/Medium baru. Status
+teknis staging source terbaru complete dan menunggu keputusan final Project Owner.
 
 Evidence: `evidence/2026-08-31-b2-finance-idempotency-staging-retest/`.

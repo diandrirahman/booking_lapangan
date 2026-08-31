@@ -1,19 +1,20 @@
 # Runtime dan deployment summary
 
-- API stable deployment `dpl_9pDwU27JiRdvULSQ7QDVJnJ1Naqq`: Ready, function region
+- API stable deployment `dpl_7aMdfQLfV2DXfrakEuRxJoZSvHgD`: Ready, function region
   `sin1`.
-- Web stable deployment `dpl_BsdCU8wX1QfPeTtNiHJyTd9ZBfRT`: Ready.
+- Web stable deployment `dpl_DkqVPw5PhKhE7tfgupKmcZhC8S5j`: Ready.
 - API live: `200`.
 - API readiness: `200`.
 - Web root: `200`.
 - Same-origin `/api/v1/health/ready`: `200`.
-- Runtime error logs setelah follow-up query: 14 timeout pada `GET /api/v1/events`.
-- Runtime HTTP `500` logs sejak deployment: tidak ada.
+- Runtime error logs deployment final setelah long-run 250 detik: tidak ada.
+- Runtime HTTP `500` logs deployment final: tidak ada.
 
 Output migration terverifikasi pada build terisolasi:
 `Migration schema numerik selesai.` Nilai environment dan credential tidak disalin ke
 evidence.
 
-Timeout terjadi setelah stream aktif 300 detik dan Vercel menghentikan function. Tidak
-ada credential dari raw runtime log disalin ke evidence. Finding ini menahan technical
-gate sampai planned close 240 detik dideploy dan diverifikasi.
+Deployment sebelumnya mempunyai 14 timeout setelah stream aktif 300 detik. Planned close
+240 detik kemudian dideploy; test 250 detik membuktikan halaman dan session tetap sehat,
+dan log deployment final bersih. Tidak ada credential dari raw runtime log disalin ke
+evidence.

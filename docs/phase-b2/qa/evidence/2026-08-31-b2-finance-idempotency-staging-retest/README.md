@@ -1,11 +1,11 @@
 # Phase B2 Finance dan Idempotency Staging Retest
 
 - Tanggal: 31 Agustus 2026
-- Source commit: `9ed32bb00424863cf3a8d744aa7ee007e90f70dc`
+- Source commit final: `d4e8bef35172d69b1b50dd34d64b6282e10e74e8`
 - Migration deployment: `dpl_9yp9ifpMjSFLPFjFjtrnrwxjCieh` (tidak dipromosikan)
-- API deployment: `dpl_9pDwU27JiRdvULSQ7QDVJnJ1Naqq` (`sin1`)
-- Web deployment: `dpl_BsdCU8wX1QfPeTtNiHJyTd9ZBfRT`
-- Status: **FINANCE PASS — SSE REMEDIATION MENUNGGU REDEPLOY/RETEST**
+- API deployment: `dpl_7aMdfQLfV2DXfrakEuRxJoZSvHgD` (`sin1`)
+- Web deployment: `dpl_DkqVPw5PhKhE7tfgupKmcZhC8S5j`
+- Status: **PASS — staging technical gate complete, menunggu Project Owner**
 
 Retest ini hanya membuktikan integration boundary dari remediation finance dan mutation
 idempotency terbaru. Automated local gate tetap menjadi bukti utama untuk seluruh
@@ -16,7 +16,7 @@ permutasi ledger, refund, earning, payout, reschedule, tenant, dan concurrency.
 - Migration `0008` dijalankan forward-only pada build production terisolasi dengan
   environment terenkripsi Vercel. Build mencatat `Migration schema numerik selesai`.
 - Deployment migration memakai `--skip-domain`; artefaknya tidak menjadi API stabil.
-- API kemudian dideploy dari working tree bersih pada source commit di atas dan
+- API final dideploy dari working tree bersih pada source commit di atas dan
   diverifikasi berada di `sin1`.
 - Frontend dideploy dari source commit yang sama dan tetap memakai same-origin rewrite.
 - API live, API ready, web, dan same-origin ready seluruhnya merespons `200`.
@@ -44,8 +44,11 @@ permutasi ledger, refund, earning, payout, reschedule, tenant, dan concurrency.
 - Regression: router memakai lifetime pendek dan membuktikan stream ready berakhir serta
   subscriber disconnect tepat sekali.
 - Relevant test, lint, typecheck, dan full `qa:b2:local` lulus.
-- Staging technical gate tetap tertahan sampai fix dideploy dan koneksi lebih dari
-  240 detik tidak menghasilkan runtime timeout baru.
+- Fix dideploy ke API final dan web dari source yang sama.
+- Koneksi staging dipertahankan 250 detik; halaman dan session tetap sehat setelah
+  planned close/reconnect.
+- Query deployment final menemukan nol error log dan nol HTTP `500` setelah long-run.
+  `B2-RT-STG-002` ditutup.
 
 Tidak ada screenshot baru karena delta ini hanya backend/database. Visual matrix staging
 24/24 dan targeted visual promotion/notification sebelumnya tetap menjadi baseline.

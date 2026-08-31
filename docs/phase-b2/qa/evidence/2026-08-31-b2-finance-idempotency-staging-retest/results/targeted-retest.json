@@ -1,10 +1,10 @@
 {
   "date": "2026-08-31",
-  "sourceCommit": "9ed32bb00424863cf3a8d744aa7ee007e90f70dc",
+  "sourceCommit": "d4e8bef35172d69b1b50dd34d64b6282e10e74e8",
   "deployments": {
     "migration": "dpl_9yp9ifpMjSFLPFjFjtrnrwxjCieh",
-    "api": "dpl_9pDwU27JiRdvULSQ7QDVJnJ1Naqq",
-    "web": "dpl_BsdCU8wX1QfPeTtNiHJyTd9ZBfRT",
+    "api": "dpl_7aMdfQLfV2DXfrakEuRxJoZSvHgD",
+    "web": "dpl_DkqVPw5PhKhE7tfgupKmcZhC8S5j",
     "apiRegion": "sin1"
   },
   "health": {
@@ -32,11 +32,12 @@
     }
   },
   "runtime": {
-    "errorLogs": 14,
+    "errorLogs": 0,
     "http500Logs": 0,
-    "sseProviderTimeouts": 14,
+    "historicalSseProviderTimeoutsBeforeFix": 14,
     "sseRemediationLocalGate": "pass",
-    "sseStagingRetest": "pending"
+    "sseStagingLongRunSeconds": 250,
+    "sseStagingRetest": "pass"
   },
-  "status": "finance-pass-sse-retest-pending"
+  "status": "pass"
 }
